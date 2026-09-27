@@ -2,6 +2,10 @@ cmake_minimum_required(VERSION 3.22.1)
 
 project(omim C CXX)
 
+# The internal libraries depend on each other cyclically, so they are always static
+# (a packaging -DBUILD_SHARED_LIBS=ON must not change that).
+set(BUILD_SHARED_LIBS OFF)
+
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_C_STANDARD 23)
 # Our code does not rely on gnu extensions.
