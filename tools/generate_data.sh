@@ -1,9 +1,9 @@
-#!/usr/bin/env bash
+#!/bin/sh
 # Generates the runtime data (strings, categories, drawing rules, symbol skins)
 # into a copy of data/ in the build tree.
 #
 # Usage: generate_data.sh <source root> <output data dir> <skin_generator_tool> <protoc>
-set -euo pipefail
+set -eu
 
 SRC="$1"
 OUT="$2"
