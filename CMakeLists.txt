@@ -127,6 +127,9 @@ include_directories(SYSTEM ${Boost_INCLUDE_DIRS})
 # Used in qt/ and shaders/
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
 
-add_subdirectory(libs)
+include(GNUInstallDirs)
 
+add_subdirectory(libs)
+add_subdirectory(tools/skin_generator)
+add_subdirectory(data)
 add_subdirectory(qt)

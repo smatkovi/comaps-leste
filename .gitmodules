@@ -1,6 +1,3 @@
-[submodule "tools/kothic"]
-  path = tools/kothic
-  url = https://codeberg.org/comaps/kothic.git
 [submodule "3party/protobuf/protobuf"]
   path = 3party/protobuf/protobuf
   url = https://codeberg.org/comaps/protobuf.git

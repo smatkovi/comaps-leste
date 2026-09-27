@@ -8,19 +8,7 @@
 #include <QtCore/QHash>
 #include <QtCore/QString>
 
-#include <gflags/gflags.h>
-
-DEFINE_string(fontFileName, "../../data/01_dejavusans.ttf", "path to TrueType font file");
-DEFINE_string(symbolsFile, "../../data/results.unicode",
-              "file with 2bytes symbols for which the skin should be generated");
-DEFINE_string(symbolsDir, "../../data/styles/symbols", "directory with svg symbol files");
-DEFINE_int32(symbolWidth, 24, "width of the rendered symbol");
-DEFINE_int32(symbolHeight, 24, "height of the rendered symbol");
-DEFINE_string(skinName, "../../data/basic", "prefix for the skin and skinImage file name");
-DEFINE_string(skinSuffix, "mdpi", "suffix for skinName<suffix>.skn and symbols<suffix>.png");
-DEFINE_int32(searchIconWidth, 24, "width of the search category icon");
-DEFINE_int32(searchIconHeight, 24, "height of the search category icon");
-DEFINE_int32(maxSize, 4096, "max width/height of output textures");
+#include <QtCore/QCommandLineParser>
 
 int main(int argc, char * argv[])
 {
@@ -28,28 +16,43 @@ int main(int argc, char * argv[])
   QHashSeed::setDeterministicGlobalSeed();
   try
   {
-    gflags::ParseCommandLineFlags(&argc, &argv, true);
     QApplication app(argc, argv);
+
+    QCommandLineParser parser;
+    parser.addHelpOption();
+    QCommandLineOption const symbolsDirOpt("symbolsDir", "directory with svg symbol files", "dir");
+    QCommandLineOption const symbolWidthOpt("symbolWidth", "width of the rendered symbol", "px", "24");
+    QCommandLineOption const symbolHeightOpt("symbolHeight", "height of the rendered symbol", "px", "24");
+    QCommandLineOption const skinNameOpt("skinName", "prefix for the skin and skinImage file name", "path");
+    QCommandLineOption const skinSuffixOpt("skinSuffix", "suffix for skinName<suffix>.skn and symbols<suffix>.png",
+                                           "suffix", "");
+    QCommandLineOption const maxSizeOpt("maxSize", "max width/height of output textures", "px", "4096");
+    parser.addOptions({symbolsDirOpt, symbolWidthOpt, symbolHeightOpt, skinNameOpt, skinSuffixOpt, maxSizeOpt});
+    parser.process(app);
+
+    std::string const symbolsDir = parser.value(symbolsDirOpt).toStdString();
+    std::string const skinName = parser.value(skinNameOpt).toStdString();
+    std::string const skinSuffix = parser.value(skinSuffixOpt).toStdString();
 
     tools::SkinGenerator gen;
 
     std::vector<QSize> symbolSizes;
-    symbolSizes.emplace_back(QSize(FLAGS_symbolWidth, FLAGS_symbolHeight));
+    symbolSizes.emplace_back(QSize(parser.value(symbolWidthOpt).toInt(), parser.value(symbolHeightOpt).toInt()));
 
     std::vector<std::string> suffixes;
-    suffixes.push_back(FLAGS_skinSuffix);
+    suffixes.push_back(skinSuffix);
 
-    gen.ProcessSymbols(FLAGS_symbolsDir, FLAGS_skinName, symbolSizes, suffixes);
+    gen.ProcessSymbols(symbolsDir, skinName, symbolSizes, suffixes);
 
-    if (!gen.RenderPages(FLAGS_maxSize))
+    if (!gen.RenderPages(parser.value(maxSizeOpt).toInt()))
     {
       LOG(LINFO, ("Error: The texture is overflown."));
       return 1;
     }
 
-    QString newSkin(FLAGS_skinName.c_str());
+    QString newSkin(skinName.c_str());
     newSkin.replace("basic", "symbols");
-    auto const filename = newSkin.toStdString() + FLAGS_skinSuffix + ".sdf";
+    auto const filename = newSkin.toStdString() + skinSuffix + ".sdf";
     if (!gen.WriteToFileNewStyle(filename))
     {
       std::cerr << "Could not write file" << filename << std::endl;

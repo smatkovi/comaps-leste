@@ -37,7 +37,6 @@ set(SRC
   locale.hpp
   localization.cpp
   localization.hpp
-  localized_types_map.cpp
   location.hpp
   measurement_utils.cpp
   measurement_utils.hpp
@@ -168,7 +167,21 @@ else() # neither iPhone nor Android
   endif()
 endif()
 
+# English type names for the desktop UI, generated from strings/LocalizableTypes.strings
+# and #included by localization_dummy.cpp as "platform/localized_types_map.cpp".
+set(LOCALIZED_TYPES_MAP ${CMAKE_BINARY_DIR}/gen/platform/localized_types_map.cpp)
+add_custom_command(
+  OUTPUT ${LOCALIZED_TYPES_MAP}
+  COMMAND ${Python3_EXECUTABLE} ${OMIM_ROOT}/tools/python/generate_desktop_ui_strings.py
+          ${CMAKE_CURRENT_SOURCE_DIR}/strings/LocalizableTypes.strings ${LOCALIZED_TYPES_MAP}
+  DEPENDS ${OMIM_ROOT}/tools/python/generate_desktop_ui_strings.py
+          ${CMAKE_CURRENT_SOURCE_DIR}/strings/LocalizableTypes.strings
+)
+set_source_files_properties(${LOCALIZED_TYPES_MAP} PROPERTIES HEADER_FILE_ONLY ON)
+list(APPEND SRC ${LOCALIZED_TYPES_MAP})
+
 omim_add_library(${PROJECT_NAME} ${SRC})
+target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_BINARY_DIR}/gen)
 
 if (APPLE)
   target_compile_options(${PROJECT_NAME} PRIVATE -fobjc-arc -Wno-nullability-completeness)

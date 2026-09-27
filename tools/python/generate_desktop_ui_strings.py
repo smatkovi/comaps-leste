@@ -65,10 +65,11 @@ def convert_to_localized_types_cpp(input_file, output_file):
 
 
 def main():
-    input_file = Path('iphone/Maps/LocalizedStrings/en.lproj/LocalizableTypes.strings')
-    output_file = Path('libs/platform/localized_types_map.cpp')
+    input_file = Path(sys.argv[1])
+    output_file = Path(sys.argv[2])
+    output_file.parent.mkdir(parents=True, exist_ok=True)
     convert_to_localized_types_cpp(str(input_file), str(output_file))
-    
+
 
 if __name__ == '__main__':
     sys.exit(main())

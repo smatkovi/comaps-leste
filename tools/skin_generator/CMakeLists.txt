@@ -17,7 +17,6 @@ target_link_libraries(${PROJECT_NAME}
 
 target_link_libraries(${PROJECT_NAME}
   PRIVATE
-    gflags::gflags
     Qt6::Xml
     Qt6::Svg
     Qt6::Widgets
