@@ -174,9 +174,8 @@ omim_add_library(${PROJECT_NAME} ${SRC})
 # Do not include glm's CMakeLists.txt, because it's outdated and not necessary.
 target_include_directories(${PROJECT_NAME} PUBLIC ${OMIM_ROOT}/3party/glm)
 
-if (PLATFORM_LINUX OR PLATFORM_WIN)
-  find_package(OpenGL)
-endif()
+# drape renders with OpenGL ES 3; its entry points come from libGLESv2, not desktop libGL.
+find_package(OpenGL REQUIRED COMPONENTS GLES3)
 
 if (PLATFORM_MAC)
   set_target_properties(${PROJECT_NAME} PROPERTIES XCODE_ATTRIBUTE_CLANG_ENABLE_OBJC_ARC YES)
@@ -201,9 +200,6 @@ target_link_libraries(${PROJECT_NAME}
     harfbuzz::harfbuzz
     ICU::i18n
     expat::expat
-    $<$<BOOL:${PLATFORM_MAC}>:-framework\ OpenGL>
-    $<$<BOOL:${PLATFORM_MAC}>:-framework\ Metal>
-    $<$<BOOL:${PLATFORM_LINUX}>:OpenGL::GL>
-    $<$<BOOL:${PLATFORM_WIN}>:OpenGL::GL>
+    OpenGL::GLES3
 )
 
