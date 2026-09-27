@@ -30,7 +30,7 @@ namespace internal
 // An arbitrary value based on what MapComplete uses
 constexpr int kPointUncertaintyMeters = 10;
 
-uint Uncertainty(osm::MapObject const & mapObject)
+uint32_t Uncertainty(osm::MapObject const & mapObject)
 {
   std::vector<m2::PointD> points;
   switch (mapObject.GetGeomType())
@@ -44,14 +44,14 @@ uint Uncertainty(osm::MapObject const & mapObject)
   auto const center = mapObject.GetMercator();
   for (auto p : points)
     maxDist = std::max(maxDist, mercator::DistanceOnEarth(center, p));
-  return static_cast<uint>(maxDist);
+  return static_cast<uint32_t>(maxDist);
 }
 
 [[nodiscard]] std::optional<std::string> Mangrove::EditorUrl(osm::MapObject const & mapObject)
 {
   ms::LatLon const center = mapObject.GetLatLon();
   auto const name = std::string(mapObject.GetDefaultName());  // TODO: use primary type if name empty?
-  uint uncertainty;
+  uint32_t uncertainty;
   try
   {
     uncertainty = Uncertainty(mapObject);

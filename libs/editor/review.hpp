@@ -5,6 +5,7 @@
 // ReSharper disable once CppUnusedIncludeDirective
 #include "indexer/map_object.hpp"
 
+#include <cstdint>
 #include <optional>
 #include <string>
 
@@ -27,7 +28,7 @@ namespace internal
 {
 
 /// Calculate the uncertainty figure for use in geo URI
-uint Uncertainty(osm::MapObject const & mapObject);
+uint32_t Uncertainty(osm::MapObject const & mapObject);
 
 struct Mangrove
 {
