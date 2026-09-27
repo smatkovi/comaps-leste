@@ -59,6 +59,6 @@ target_link_libraries(${PROJECT_NAME}
 target_link_libraries(${PROJECT_NAME}
   PUBLIC
     opening_hours
-    pugixml
+    pugixml::pugixml
 )
 

@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 
-#include "3party/harfbuzz/harfbuzz/src/hb.h"
+#include <hb.h>
 
 namespace dp
 {

@@ -89,19 +89,13 @@ if (USE_PCH)
   )
 endif()
 
-# Should be on the root level, not in 3party, so tests can get these dependencies.
-if (PLATFORM_LINUX)
-  find_package(Freetype REQUIRED)
-  find_package(harfbuzz REQUIRED)
-endif()
-
-if (WITH_SYSTEM_PROVIDED_3PARTY)
-  find_package(expat CONFIG REQUIRED)
-  find_package(jansson CONFIG REQUIRED)
-  find_package(pugixml REQUIRED)
-  find_package(utf8cpp REQUIRED)
-endif()
-
+find_package(Freetype REQUIRED)
+find_package(harfbuzz CONFIG REQUIRED)
+find_package(expat CONFIG REQUIRED)
+find_package(jansson CONFIG REQUIRED)
+find_package(pugixml CONFIG REQUIRED)
+find_package(utf8cpp CONFIG REQUIRED)
+find_package(glm CONFIG REQUIRED)
 find_package(ZLIB REQUIRED)
 find_package(Protobuf CONFIG REQUIRED)
 

@@ -149,8 +149,7 @@ if (PLATFORM_IPHONE OR PLATFORM_MAC)
   )
 endif()
 
-# Do not include glm's CMakeLists.txt, because it's outdated and not necessary.
-target_include_directories(${PROJECT_NAME} PUBLIC "${OMIM_ROOT}/3party/glm")
+target_link_libraries(${PROJECT_NAME} PUBLIC glm::glm-header-only)
 
 target_link_libraries(${PROJECT_NAME}
   PUBLIC
