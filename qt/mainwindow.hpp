@@ -62,24 +62,11 @@ class MainWindow
   PopupMenuHolder * m_routing = nullptr;
   PopupMenuHolder * m_selection = nullptr;
 
-#ifdef BUILD_DESIGNER
-  QString const m_mapcssFilePath = nullptr;
-  QAction * m_pBuildStyleAction = nullptr;
-  QAction * m_pRecalculateGeomIndex = nullptr;
-  QAction * m_pDrawDebugRectAction = nullptr;
-  QAction * m_pGetStatisticsAction = nullptr;
-  QAction * m_pRunTestsAction = nullptr;
-  QAction * m_pBuildPhonePackAction = nullptr;
-#endif  // BUILD_DESIGNER
 
   Q_OBJECT
 
 public:
   MainWindow(Framework & framework, std::unique_ptr<ScreenshotParams> && screenshotParams, QRect const & screenGeometry
-#ifdef BUILD_DESIGNER
-             ,
-             QString const & mapcssFilePath = QString()
-#endif
   );
 
 protected:
@@ -124,7 +111,6 @@ protected Q_SLOTS:
   void OnCancelDownloadClicked();
 
   void OnSwitchSelectionMode(SelectionMode mode);
-  void OnSwitchMwmsBordersSelectionMode();
   void OnClearSelection();
 
   void OnMapModeChange(MapMode const mapMode);
@@ -146,13 +132,5 @@ protected Q_SLOTS:
 
   void OnBookmarksAction();
 
-#ifdef BUILD_DESIGNER
-  void OnBuildStyle();
-  void OnRecalculateGeomIndex();
-  void OnDebugStyle();
-  void OnGetStatistics();
-  void OnRunTests();
-  void OnBuildPhonePackage();
-#endif  // BUILD_DESIGNER
 };
 }  // namespace qt

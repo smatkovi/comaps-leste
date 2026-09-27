@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=CoMaps
+GenericName=Maps
+Comment=Detailed offline maps of the world
+Exec=comaps
+Icon=comaps
+Terminal=false
+Categories=Maps;Education;Geography;Qt;
+Keywords=Map;Maps;Offline Maps;Navigation;OSM;OpenStreetMap;

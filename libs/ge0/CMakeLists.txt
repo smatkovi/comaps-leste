@@ -18,4 +18,3 @@ target_link_libraries(${PROJECT_NAME}
     geometry
 )
 
-omim_add_test_subdirectory(ge0_tests)

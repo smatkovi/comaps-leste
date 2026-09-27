@@ -229,4 +229,3 @@ target_link_libraries(${PROJECT_NAME}
     editor
 )
 
-omim_add_test_subdirectory(drape_frontend_tests)

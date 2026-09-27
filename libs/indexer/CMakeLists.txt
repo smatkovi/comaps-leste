@@ -184,4 +184,3 @@ target_link_libraries(${PROJECT_NAME}
     protobuf
 )
 
-omim_add_test_subdirectory(indexer_tests)

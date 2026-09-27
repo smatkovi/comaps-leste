@@ -115,12 +115,3 @@ target_link_libraries(${PROJECT_NAME}
     agg
 )
 
-omim_add_test_subdirectory(map_integration_tests)
-omim_add_test_subdirectory(map_tests)
-omim_add_test_subdirectory(mwm_tests)
-omim_add_test_subdirectory(style_tests)
-
-if (PLATFORM_DESKTOP)
-  omim_add_tool_subdirectory(benchmark_tool)
-  omim_add_tool_subdirectory(extrapolation_benchmark)
-endif()

@@ -31,8 +31,3 @@ target_link_libraries(${PROJECT_NAME}
     platform
 )
 
-omim_add_test_subdirectory(tracking_tests)
-
-if (USE_LIBFUZZER)
-  add_subdirectory(tracking_fuzz_tests)
-endif()

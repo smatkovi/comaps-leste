@@ -106,4 +106,3 @@ target_link_libraries(${PROJECT_NAME}
     ZLIB::ZLIB
 )
 
-omim_add_test_subdirectory(coding_tests)

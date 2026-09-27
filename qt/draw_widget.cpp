@@ -9,7 +9,6 @@
 #include "qt/routing_settings_dialog.hpp"
 #include "qt/screenshoter.hpp"
 
-#include "generator/borders.hpp"
 
 #include "map/framework.hpp"
 
@@ -308,63 +307,6 @@ void DrawWidget::mouseMoveEvent(QMouseEvent * e)
     m_rubberBand->setGeometry(QRect(m_rubberBandOrigin, e->pos()).normalized());
 }
 
-void DrawWidget::VisualizeMwmsBordersInRect(m2::RectD const & rect, bool withVertices, bool fromPackedPolygon,
-                                            bool boundingBox)
-{
-  auto const getRegions = [&](std::string const & mwmName)
-  {
-    if (fromPackedPolygon)
-    {
-      std::vector<storage::CountryDef> countries;
-      FilesContainerR reader(base::JoinPath(GetPlatform().ResourcesDir(), PACKED_POLYGONS_FILE));
-      ReaderSource<ModelReaderPtr> src(reader.GetReader(PACKED_POLYGONS_INFO_TAG));
-      rw::Read(src, countries);
-
-      for (size_t id = 0; id < countries.size(); ++id)
-      {
-        if (countries[id].m_countryId != mwmName)
-          continue;
-
-        src = reader.GetReader(std::to_string(id));
-        return borders::ReadPolygonsOfOneBorder(src);
-      }
-
-      UNREACHABLE();
-    }
-    else
-    {
-      std::string const bordersDir = base::JoinPath(GetPlatform().WritableDir(), BORDERS_DIR);
-      std::string const path = base::JoinPath(bordersDir, mwmName + BORDERS_EXTENSION);
-
-      std::vector<m2::RegionD> polygons;
-      borders::LoadBorders(path, polygons);
-      return polygons;
-    }
-  };
-
-  auto mwmNames = m_framework.GetRegionsCountryIdByRect(rect, false /* rough */);
-
-  for (auto & mwmName : mwmNames)
-  {
-    auto regions = getRegions(mwmName);
-    mwmName += fromPackedPolygon ? ".bin" : ".poly";
-    if (boundingBox)
-    {
-      std::vector<m2::RegionD> boxes;
-      for (auto const & region : regions)
-      {
-        auto const r = region.GetRect();
-        boxes.emplace_back(
-            std::vector<m2::PointD>({r.LeftBottom(), r.LeftTop(), r.RightTop(), r.RightBottom(), r.LeftBottom()}));
-      }
-
-      regions = std::move(boxes);
-      mwmName += ".box";
-    }
-    DrawMwmBorder(m_framework.GetDrapeApi(), mwmName, regions, withVertices);
-  }
-}
-
 void DrawWidget::mouseReleaseEvent(QMouseEvent * e)
 {
   if (m_screenshotMode)
@@ -394,30 +336,6 @@ void DrawWidget::ProcessSelectionMode()
   case SelectionMode::CityRoads: m_framework.VisualizeCityRoadsInRect(rect); break;
 
   case SelectionMode::CrossMwmSegments: m_framework.VisualizeCrossMwmTransitionsInRect(rect); break;
-
-  case SelectionMode::MwmsBordersByPolyFiles:
-    VisualizeMwmsBordersInRect(rect, false /* withVertices */, false /* fromPackedPolygon */, false /* boundingBox */);
-    break;
-
-  case SelectionMode::MwmsBordersWithVerticesByPolyFiles:
-    VisualizeMwmsBordersInRect(rect, true /* withVertices */, false /* fromPackedPolygon */, false /* boundingBox */);
-    break;
-
-  case SelectionMode::MwmsBordersByPackedPolygon:
-    VisualizeMwmsBordersInRect(rect, false /* withVertices */, true /* fromPackedPolygon */, false /* boundingBox */);
-    break;
-
-  case SelectionMode::MwmsBordersWithVerticesByPackedPolygon:
-    VisualizeMwmsBordersInRect(rect, true /* withVertices */, true /* fromPackedPolygon */, false /* boundingBox */);
-    break;
-
-  case SelectionMode::BoundingBoxByPolyFiles:
-    VisualizeMwmsBordersInRect(rect, true /* withVertices */, false /* fromPackedPolygon */, true /* boundingBox */);
-    break;
-
-  case SelectionMode::BoundingBoxByPackedPolygon:
-    VisualizeMwmsBordersInRect(rect, true /* withVertices */, true /* fromPackedPolygon */, true /* boundingBox */);
-    break;
 
   default: UNREACHABLE();
   }

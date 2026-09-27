@@ -93,7 +93,6 @@ private:
   void SubmitBookmark(m2::PointD const & pt);
   void ShowPlacePage();
 
-  void VisualizeMwmsBordersInRect(m2::RectD const & rect, bool withVertices, bool fromPackedPolygon, bool boundingBox);
 
   m2::PointD P2G(m2::PointD const & pt) const;
   m2::PointD GetCoordsFromSettingsIfExists(bool start, m2::PointD const & pt, bool pointIsMercator) const;

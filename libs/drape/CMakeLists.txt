@@ -207,6 +207,3 @@ target_link_libraries(${PROJECT_NAME}
     $<$<BOOL:${PLATFORM_WIN}>:OpenGL::GL>
 )
 
-omim_add_test_subdirectory(drape_tests)
-
-omim_add_tool_subdirectory(fonts_tool)

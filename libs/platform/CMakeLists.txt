@@ -205,11 +205,7 @@ target_link_libraries(${PROJECT_NAME}
       >
 )
 
-omim_add_test_subdirectory(platform_tests_support)
-omim_add_test_subdirectory(platform_tests)
-if (NOT SKIP_QT_GUI)
-  add_subdirectory(location_service)
-endif()
+add_subdirectory(location_service)
 
 # strings::UniChar clashes with Apple's definition.
 set_property(SOURCE preferred_languages.cpp PROPERTY SKIP_UNITY_BUILD_INCLUSION ON)

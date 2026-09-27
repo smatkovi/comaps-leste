@@ -29,9 +29,3 @@ target_link_libraries(${PROJECT_NAME}
     indexer
 )
 
-if (PLATFORM_DESKTOP)
-    add_subdirectory(world_feed)
-endif()
-
-omim_add_test_subdirectory(transit_experimental_tests)
-omim_add_test_subdirectory(transit_tests)

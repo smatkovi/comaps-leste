@@ -62,10 +62,3 @@ target_link_libraries(${PROJECT_NAME}
     pugixml
 )
 
-omim_add_test_subdirectory(editor_tests)
-omim_add_test_subdirectory(osm_auth_tests)
-
-if(NOT (SKIP_TESTS AND SKIP_TOOLS))
-# used by both tests and tools
-add_subdirectory(editor_tests_support)
-endif()

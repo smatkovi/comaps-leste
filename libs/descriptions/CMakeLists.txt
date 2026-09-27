@@ -17,4 +17,3 @@ target_link_libraries(${PROJECT_NAME}
     indexer  # MwmHandle
 )
 
-omim_add_test_subdirectory(descriptions_tests)

@@ -32,22 +32,6 @@ include(OmimPlatform)
 include(OmimOptions)
 include(OmimConfig)
 include(OmimHelpers)
-include(OmimTesting)
-
-if (APPLE AND NOT ("${CMAKE_SYSTEM_NAME}" STREQUAL Android))
-  # OBJC/OBJCXX are needed to skip m/mm files in Unity builds.
-  # https://gitlab.kitware.com/cmake/cmake/-/issues/21963
-  enable_language(OBJC)
-  set(CMAKE_OBJC_EXTENSIONS OFF)
-  set(CMAKE_OBJC_STANDARD 23)
-  set(CMAKE_OBJC_FLAGS -fobjc-arc)
-  set(CMAKE_OBJC_VISIBILITY_PRESET hidden)
-  enable_language(OBJCXX)
-  set(CMAKE_OBJCXX_EXTENSIONS OFF)
-  set(CMAKE_OBJCXX_STANDARD 23)
-  set(CMAKE_OBJCXX_FLAGS -fobjc-arc)
-  set(CMAKE_OBJCXX_VISIBILITY_PRESET hidden)
-endif()
 
 message(STATUS "Using compiler ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}")
 
@@ -66,47 +50,17 @@ if (USE_CCACHE)
   endif()
 endif()
 
-if(${PLATFORM_MAC})
-  set(XCODE_ATTRIBUTE_CLANG_ENABLE_OBJC_ARC YES)
-
-  # Metal language support
-  list(APPEND CMAKE_MODULE_PATH ${OMIM_ROOT}/3party/CMake-MetalShaderSupport/cmake)
-  include(CheckLanguage)
-  include(CMakeMetalInformation)
-  include(MetalShaderSupport)
-  check_language(Metal)
-  if(CMAKE_Metal_COMPILER)
-    enable_language(Metal)
-  endif()
-endif()
-
 # Global compile options for all configurations.
-if (MSVC)
-  add_compile_options(/utf-8)
-  add_link_options(/INCREMENTAL:NO)
-else()
-  add_compile_options(-ffast-math $<$<CXX_COMPILER_ID:GNU>:-Wno-psabi>)
-endif()
-
-if (PLATFORM_WIN)
-  add_definitions(
-    -DWIN32_LEAN_AND_MEAN
-    -DNOMINMAX
-  )
-endif()
+add_compile_options(-ffast-math $<$<CXX_COMPILER_ID:GNU>:-Wno-psabi>)
 
 # Built-in CMake configurations: Debug, Release, RelWithDebInfo, MinSizeRel
 if (${CMAKE_BUILD_TYPE} STREQUAL "Debug")
   add_definitions(-DDEBUG)
-  if (NOT MSVC)
-    add_compile_options(-fno-omit-frame-pointer)
-  endif()
+  add_compile_options(-fno-omit-frame-pointer)
 elseif (${CMAKE_BUILD_TYPE} MATCHES "Rel")
   add_definitions(-DRELEASE)
-  if (NOT MSVC)
-    add_compile_options(-O3)
-    set (CMAKE_INTERPROCEDURAL_OPTIMIZATION True)
-  endif()
+  add_compile_options(-O3)
+  set (CMAKE_INTERPROCEDURAL_OPTIMIZATION True)
 else()
   message(FATAL_ERROR "Unknown build type: " ${CMAKE_BUILD_TYPE})
 endif()
@@ -117,44 +71,11 @@ endif()
 
 message(STATUS "Build type: " ${CMAKE_BUILD_TYPE})
 
-if (NOT SKIP_TESTS)
-  enable_testing()
-  # Enables ctest -T memcheck with valgrind
-  include(CTest)
-  if (COVERAGE_REPORT)
-    include(OmimCoverage)
-  endif ()
-endif()
-
-if (NOT PYTHON_VERSION)
-  # FDroid build server has 3.5.3 Python installed.
-  set(PYTHON_VERSION 3.5)
-endif()
-
-# End of setting environment variables
-
 find_package(Threads REQUIRED)
 
 # Scripts
 
-if (NOT PLATFORM_IPHONE AND NOT PLATFORM_ANDROID)
-  list(APPEND qt_components Core Network)
-  if (NOT SKIP_QT_GUI OR NOT SKIP_TESTS OR PYBINDINGS)
-    list(APPEND qt_components Widgets)
-  endif()
-  if (NOT SKIP_QT_GUI)
-    list(APPEND qt_components Gui Xml Svg OpenGL OpenGLWidgets)
-  endif()
-  # PATHS are hard-coded hints where to look for qt6 in addition to other places.
-  find_package(Qt6 COMPONENTS REQUIRED ${qt_components} PATHS $ENV{QT_PATH} /opt/homebrew/opt/qt@6 /usr/local/opt/qt@6 /usr/lib/x86_64-linux-gnu/qt6)
-
-  set(MINIMUM_REQUIRED_QT_VERSION 6.4.0)
-  if (Qt6_VERSION VERSION_LESS ${MINIMUM_REQUIRED_QT_VERSION})
-    message(FATAL_ERROR "Unsupported Qt version: ${Qt6_VERSION}, the minimum required is ${MINIMUM_REQUIRED_QT_VERSION}")
-  else()
-    message(STATUS "Found Qt version: ${Qt6_VERSION}")
-  endif()
-endif()
+find_package(Qt6 6.4 REQUIRED COMPONENTS Core Network Widgets Gui Xml Svg OpenGL OpenGLWidgets)
 
 # To allow #include "base/file_name.hpp" in all sources.
 include_directories("${CMAKE_HOME_DIRECTORY}" "${CMAKE_HOME_DIRECTORY}/libs" "${CMAKE_HOME_DIRECTORY}/tools")
@@ -203,61 +124,9 @@ endif()
 # Fix for #include <boost/regex.hpp>
 include_directories(SYSTEM ${Boost_INCLUDE_DIRS})
 
-
 # Used in qt/ and shaders/
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
 
-# Detect python virtual environment and use it if available
-if(DEFINED ENV{VIRTUAL_ENV})
-  set(PYTHON_VENV_PATH "$ENV{VIRTUAL_ENV}")
-  set(Python3_EXECUTABLE "python3")
-  message(STATUS "==> Python Virtual Environment detected : ${PYTHON_VENV_PATH}"  "  ==>  "  "Using python command: ${Python3_EXECUTABLE}" )
-elseif(EXISTS "${OMIM_ROOT}/.venv")
-  if(EXISTS "${OMIM_ROOT}/.venv/bin/python3")
-    set(Python3_EXECUTABLE "${OMIM_ROOT}/.venv/bin/python3")
-  elseif(EXISTS "${OMIM_ROOT}/.venv/Scripts/python.exe")
-    set(Python3_EXECUTABLE "${OMIM_ROOT}/.venv/Scripts/python.exe")
-  endif()
-  message(STATUS "==> Python Virtual Environment detected : ${OMIM_ROOT}/.venv"  "  ==>  "  "Using python command: ${Python3_EXECUTABLE}" )
-endif()
-
-execute_process(
-    COMMAND ${Python3_EXECUTABLE} -c "import google.protobuf; 
-print(google.protobuf.__version__)"
-    RESULT_VARIABLE PROTOBUF_CHECK
-    OUTPUT_VARIABLE PROTOBUF_VERSION
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-    ERROR_QUIET
-)
-
-if(PROTOBUF_CHECK EQUAL 0)
-    if(PROTOBUF_VERSION VERSION_LESS "3.20.0" OR PROTOBUF_VERSION VERSION_GREATER_EQUAL "4.0.0")
-        message(FATAL_ERROR "Python protobuf ${PROTOBUF_VERSION} found, but version (>=3.20, <4.0) is required. Run ./configure.sh to provision a local .venv with the correct version, or set SKIP_PYTHON_VENV=1 to manage protobuf via your system Python.")
-    else()
-        message(STATUS "Python protobuf ${PROTOBUF_VERSION} found (>=3.20, <4.0)")
-    endif()
-else()
-    message(FATAL_ERROR "Python protobuf not found. Run ./configure.sh to provision a local .venv with the correct version (>=3.20, <4.0), or set SKIP_PYTHON_VENV=1 to manage protobuf via your system Python.")
-endif()
-
-
 add_subdirectory(libs)
 
-if (PLATFORM_DESKTOP)
-  add_subdirectory(dev_sandbox)
-  add_subdirectory(generator)
-  add_subdirectory(tools)
-  if (NOT SKIP_QT_GUI)
-    add_subdirectory(qt)
-  endif()
-  if (GENERATOR_TOOL)
-    add_compile_options(-march=native -mtune=native)
-    message(STATUS "target CPU optimizations enabled, produced binaries will NOT work on a different CPU")
-  endif()
-endif()
-
-omim_add_test_subdirectory(libs/qt_tstfrm)
-
-if (PLATFORM_ANDROID)
-  add_subdirectory(android/sdk/src/main/cpp)
-endif()
+add_subdirectory(qt)

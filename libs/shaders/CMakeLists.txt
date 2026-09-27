@@ -165,4 +165,3 @@ if (PLATFORM_MAC)
   set_target_properties(${PROJECT_NAME} PROPERTIES XCODE_ATTRIBUTE_CLANG_ENABLE_OBJC_ARC YES)
 endif()
 
-omim_add_test_subdirectory(shaders_tests)

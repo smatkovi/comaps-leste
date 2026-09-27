@@ -25,4 +25,3 @@ target_link_libraries(${PROJECT_NAME}
     platform
 )
 
-omim_add_test_subdirectory(routing_common_tests)

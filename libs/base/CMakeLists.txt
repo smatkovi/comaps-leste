@@ -120,4 +120,3 @@ if (NOT WITH_SYSTEM_PROVIDED_3PARTY)
   target_include_directories(${PROJECT_NAME} PRIVATE "${OMIM_ROOT}/3party/fast_double_parser/include")
 endif()
 
-omim_add_test_subdirectory(base_tests)

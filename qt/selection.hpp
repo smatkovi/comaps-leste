@@ -11,15 +11,6 @@ enum class SelectionMode
   CrossMwmSegments,
   MWMBorders,
 
-  MwmsBordersByPolyFiles,
-  MwmsBordersWithVerticesByPolyFiles,
-
-  MwmsBordersByPackedPolygon,
-  MwmsBordersWithVerticesByPackedPolygon,
-
-  BoundingBoxByPolyFiles,
-  BoundingBoxByPackedPolygon,
-
   // Should be the last
   Cancelled,
 };

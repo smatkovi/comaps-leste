@@ -24,9 +24,6 @@
 
 using namespace measurement_utils;
 
-#ifdef BUILD_DESIGNER
-std::string const kEnabledAutoRegenGeomIndex = "EnabledAutoRegenGeomIndex";
-#endif
 
 namespace qt
 {
@@ -225,17 +222,6 @@ PreferencesDialog::PreferencesDialog(QWidget * parent, Framework & framework)
     { framework.SwitchToMapAppearance(i == 0 ? MapAppearance::Light : MapAppearance::Dark); });
   }
 
-#ifdef BUILD_DESIGNER
-  QCheckBox * indexRegenCheckBox = new QCheckBox("Enable auto regeneration of geometry index");
-  {
-    bool enabled = false;
-    if (!settings::Get(kEnabledAutoRegenGeomIndex, enabled))
-      settings::Set(kEnabledAutoRegenGeomIndex, false);
-    indexRegenCheckBox->setChecked(enabled);
-    connect(indexRegenCheckBox, &QCheckBox::stateChanged,
-            [](int i) { settings::Set(kEnabledAutoRegenGeomIndex, static_cast<bool>(i)); });
-  }
-#endif
 
   QHBoxLayout * bottomLayout = new QHBoxLayout();
   {
@@ -260,9 +246,6 @@ PreferencesDialog::PreferencesDialog(QWidget * parent, Framework & framework)
   finalLayout->addWidget(alternativeMapLanguageHandlingComboBox);
   finalLayout->addWidget(mapAppearanceRadioBox);
   finalLayout->addWidget(showBookmarkLabelsCheckBox);
-#ifdef BUILD_DESIGNER
-  finalLayout->addWidget(indexRegenCheckBox);
-#endif
   finalLayout->addLayout(bottomLayout);
   setLayout(finalLayout);
 }

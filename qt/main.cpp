@@ -16,7 +16,6 @@
 #include "base/logging.hpp"
 #include "base/macros.hpp"
 
-#include "build_style/build_style.h"
 
 #include <QtGlobal>
 #include <QtWidgets/QApplication>
@@ -138,14 +137,10 @@ int main(int argc, char * argv[])
   UNUSED_VALUE(mainGuard);
 
   QApplication app(argc, argv);
-  app.setDesktopFileName("app.comaps.comaps");
+  app.setDesktopFileName("comaps");
   platform.SetupMeasurementSystem();
 
-#ifdef BUILD_DESIGNER
-  QApplication::setApplicationName("CoMaps Designer");
-#else
   QApplication::setApplicationName("CoMaps");
-#endif
 
 #ifdef DEBUG
   static bool constexpr developerMode = true;
@@ -212,60 +207,13 @@ int main(int argc, char * argv[])
 
     FrameworkParams frameworkParams;
 
-#ifdef BUILD_DESIGNER
-    QString mapcssFilePath;
-    if (argc >= 2 && platform.IsFileExistsByFullPath(argv[1]))
-      mapcssFilePath = argv[1];
-    if (0 == mapcssFilePath.length())
-      mapcssFilePath = QFileDialog::getOpenFileName(nullptr, "Open style.mapcss file", "~/", "MapCSS Files (*.mapcss)");
-    if (mapcssFilePath.isEmpty())
-      return returnCode;
-
-    try
-    {
-      build_style::BuildIfNecessaryAndApply(mapcssFilePath);
-    }
-    catch (std::exception const & e)
-    {
-      QMessageBox msgBox;
-      msgBox.setWindowTitle("Error");
-      msgBox.setText(e.what());
-      msgBox.setStandardButtons(QMessageBox::Ok);
-      msgBox.setDefaultButton(QMessageBox::Ok);
-      msgBox.exec();
-      return returnCode;
-    }
-
-#endif  // BUILD_DESIGNER
 
     Framework framework(frameworkParams);
     qt::MainWindow w(framework, std::move(screenshotParams), QApplication::primaryScreen()->geometry()
-#ifdef BUILD_DESIGNER
-                                                                 ,
-                     mapcssFilePath
-#endif  // BUILD_DESIGNER
     );
     w.show();
     returnCode = QApplication::exec();
 
-#ifdef BUILD_DESIGNER
-    if (build_style::NeedRecalculate && !mapcssFilePath.isEmpty())
-    {
-      try
-      {
-        build_style::RunRecalculationGeometryScript(mapcssFilePath);
-      }
-      catch (std::exception & e)
-      {
-        QMessageBox msgBox;
-        msgBox.setWindowTitle("Error");
-        msgBox.setText(e.what());
-        msgBox.setStandardButtons(QMessageBox::Ok);
-        msgBox.setDefaultButton(QMessageBox::Ok);
-        msgBox.exec();
-      }
-    }
-#endif  // BUILD_DESIGNER
   }
 
   LOG_SHORT(LINFO, ("Finished with code", returnCode));

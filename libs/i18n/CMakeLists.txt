@@ -32,4 +32,3 @@ target_link_libraries(${PROJECT_NAME}
     ICU::i18n # For transliteration.
 )
 
-omim_add_test_subdirectory(i18n_tests)

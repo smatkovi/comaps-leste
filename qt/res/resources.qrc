@@ -25,7 +25,6 @@
         <file>chart.png</file>
         <file>test.png</file>
         <file>geom.png</file>
-        <file>phonepack.png</file>
         <file>bookmark.png</file>
         <file>ruler.png</file>
         <file>mode_walking.png</file>
@@ -40,11 +39,9 @@
         <file>layers.png</file>
         <file>guides.png</file>
         <file>settings-routing.png</file>
-        <file>borders_selection.png</file>
     </qresource>
     <qresource prefix="/ui">
         <file>logo.png</file>
-        <file>designer.png</file>
         <file>busy.png</file>
         <file>x.png</file>
     </qresource>

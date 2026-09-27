@@ -81,5 +81,3 @@ target_link_libraries(${PROJECT_NAME}
     monocypher
 )
 
-omim_add_test_subdirectory(storage_tests)
-omim_add_test_subdirectory(storage_integration_tests)
