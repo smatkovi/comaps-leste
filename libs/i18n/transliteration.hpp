@@ -4,18 +4,11 @@
 
 #include <atomic>
 #include <cstdint>
-#include <map>
-#include <memory>
-#include <mutex>
 #include <string>
+#include <string_view>
 
-// From ICU library, either 3party/icu or from the system's package.
-#include <unicode/uversion.h>
-
-U_NAMESPACE_BEGIN
-class UnicodeString;
-U_NAMESPACE_END
-
+// Built without ICU, so there is no transliteration: every call reports
+// "not transliterated" and names are shown and searched as they are.
 class Transliteration
 {
 public:
@@ -24,8 +17,6 @@ public:
     Enabled,
     Disabled
   };
-
-  ~Transliteration();
 
   static Transliteration & Instance();
 
@@ -41,14 +32,7 @@ public:
   bool TransliterateForce(std::string const & str, std::string const & transliteratorId, std::string & out) const;
 
 private:
-  struct TransliteratorInfo;
+  Transliteration() = default;
 
-  Transliteration();
-
-  bool Transliterate(localisation::TransliteratorId const transliteratorId, icu::UnicodeString & ustr) const;
-
-  std::mutex m_initializationMutex;
-  std::atomic<bool> m_inited;
-  std::atomic<Mode> m_mode;
-  std::map<std::string, std::unique_ptr<TransliteratorInfo>> m_transliterators;
+  std::atomic<Mode> m_mode = Mode::Enabled;
 };

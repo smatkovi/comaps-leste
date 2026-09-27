@@ -198,7 +198,6 @@ target_link_libraries(${PROJECT_NAME}
     vulkan_wrapper
     stb_image
     harfbuzz::harfbuzz
-    ICU::i18n
     expat::expat
     OpenGL::GLES3
 )

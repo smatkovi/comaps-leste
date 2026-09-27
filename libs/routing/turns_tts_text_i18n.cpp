@@ -1,6 +1,5 @@
 #include "base/logging.hpp"
 #include "base/string_utils.hpp"
-#include "unicode/uchar.h"
 
 #include <string>
 
@@ -41,7 +40,7 @@ bool EndsInAcronymOrNum(strings::UniString const & myUniStr)
       break;
     // we've found a char that is already lowercase and not a number,
     // therefore the string is not exclusively uppercase/numeric
-    else if (myUniStr[i] == lowerStr[i] && !u_isdigit(myUniStr[i]))
+    else if (myUniStr[i] == lowerStr[i] && !strings::IsASCIIDigit(myUniStr[i]))
     {
       allUppercaseNum = false;
       break;

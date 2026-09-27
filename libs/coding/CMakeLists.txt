@@ -100,8 +100,6 @@ target_link_libraries(${PROJECT_NAME}
   PUBLIC
     expat::expat
     succinct
-    ICU::uc
-    ICU::i18n # For transliteration.
     minizip
     ZLIB::ZLIB
 )

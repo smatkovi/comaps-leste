@@ -27,8 +27,3 @@ target_link_libraries(${PROJECT_NAME}
     platform
 )
 
-target_link_libraries(${PROJECT_NAME}
-  PRIVATE
-    ICU::i18n # For transliteration.
-)
-

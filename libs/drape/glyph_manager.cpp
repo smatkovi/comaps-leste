@@ -21,7 +21,6 @@
 
 #include <ft2build.h>
 #include <hb-ft.h>
-#include <unicode/unistr.h>
 #include <utf8/unchecked.h>
 
 #include FT_FREETYPE_H
