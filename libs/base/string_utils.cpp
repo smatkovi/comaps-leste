@@ -12,7 +12,6 @@
 #include <iomanip>
 #include <string>
 
-#include <fast_double_parser.h>
 
 namespace strings
 {
@@ -38,23 +37,10 @@ double RealConverter<double>(char const * start, char ** stop)
 template <typename T>
 bool ToReal(char const * start, T & result)
 {
-  // Try faster implementation first.
-  double d;
-  // TODO(AB): replace with more robust dependency that doesn't use std::is_finite in the implementation.
-  char const * endptr = fast_double_parser::parse_number(start, &d);
-  if (endptr == nullptr)
-  {
-    // Fallback to our implementation, it supports numbers like "1."
-    char * stop;
-    result = RealConverter<T>(start, &stop);
-    if (*stop == 0 && start != stop && math::is_finite(result))
-      return true;
-  }
-  else if (*endptr == 0 && math::is_finite(d))
-  {
-    result = static_cast<T>(d);
+  char * stop;
+  result = RealConverter<T>(start, &stop);
+  if (*stop == 0 && start != stop && math::is_finite(result))
     return true;
-  }
   // Do not parse strings that contain additional non-number characters.
   return false;
 }

@@ -96,9 +96,6 @@ if (PLATFORM_LINUX)
 endif()
 
 if (WITH_SYSTEM_PROVIDED_3PARTY)
-  set(GFLAGS_USE_TARGET_NAMESPACE ON)
-  find_package(gflags REQUIRED)
-
   find_package(expat CONFIG REQUIRED)
   find_package(jansson CONFIG REQUIRED)
   find_package(pugixml REQUIRED)
@@ -113,12 +110,6 @@ set(3PARTY_INCLUDE_DIRS ${Boost_INCLUDE_DIRS})
 
 # Include 3party dependencies.
 add_subdirectory(3party)
-
-# Not needed for the usual build process, but it fixes QtCreator editor,
-# that doesn't see gflags/gflags.h in binary dir (gflags has tricky cmake configuration).
-if (PLATFORM_DESKTOP AND NOT WITH_SYSTEM_PROVIDED_3PARTY)
-  include_directories("${PROJECT_BINARY_DIR}/3party/gflags/include")
-endif()
 
 # Fix for #include <boost/regex.hpp>
 include_directories(SYSTEM ${Boost_INCLUDE_DIRS})

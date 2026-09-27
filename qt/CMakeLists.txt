@@ -74,7 +74,6 @@ target_link_libraries(${PROJECT_NAME}
     coding
     editor
     i18n
-    gflags::gflags
 )
 
 include(GNUInstallDirs)

@@ -32,11 +32,6 @@ if (NOT WITH_SYSTEM_PROVIDED_3PARTY)
   add_subdirectory(jansson/jansson/)
   target_include_directories(jansson INTERFACE "${PROJECT_BINARY_DIR}/3party/jansson/jansson/include")
 
-  # Add gflags library.
-  set(GFLAGS_BUILD_TESTING OFF)
-  set(GFLAGS_BUILD_PACKAGING OFF)
-  add_subdirectory(gflags)
-  target_compile_options(gflags_nothreads_static PRIVATE $<$<CXX_COMPILER_ID:GNU>:-Wno-subobject-linkage>)
 
   # Add pugixml library.
   add_subdirectory(pugixml)
