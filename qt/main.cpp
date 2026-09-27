@@ -98,7 +98,6 @@ int main(int argc, char * argv[])
     qt::MainWindow w(framework, std::move(screenshotParams), QApplication::primaryScreen()->geometry());
     w.show();
     returnCode = QApplication::exec();
-
   }
 
   LOG_SHORT(LINFO, ("Finished with code", returnCode));
