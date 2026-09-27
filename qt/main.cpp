@@ -1,5 +1,3 @@
-#include "qt/html_processor.hpp"
-#include "qt/info_dialog.hpp"
 #include "qt/mainwindow.hpp"
 #include "qt/screenshoter.hpp"
 
@@ -70,24 +68,7 @@ int main(int argc, char * argv[])
   if (!settings::Get(settings::kDeveloperMode, outvalue))
     settings::Set(settings::kDeveloperMode, developerMode);
 
-  // Display EULA if needed.
-  char const * settingsEULA = "EulaAccepted";
-  bool eulaAccepted = false;
-  if (!settings::Get(settingsEULA, eulaAccepted) || !eulaAccepted)
-  {
-    std::string buffer;
-    {
-      ReaderPtr<Reader> reader = platform.GetReader("copyright.html");
-      reader.ReadAsString(buffer);
-    }
-    RemovePTagsWithNonMatchedLanguages(languages::GetCurrentTwine(), buffer);
-    qt::InfoDialog eulaDialog(QCoreApplication::applicationName(), buffer.c_str(), nullptr, {"Accept", "Decline"});
-    eulaAccepted = (eulaDialog.exec() == 1);
-    settings::Set(settingsEULA, eulaAccepted);
-  }
-
   int returnCode = -1;
-  if (eulaAccepted)  // User has accepted EULA
   {
     std::unique_ptr<qt::ScreenshotParams> screenshotParams;
 

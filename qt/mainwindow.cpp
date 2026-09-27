@@ -160,38 +160,6 @@ MainWindow::MainWindow(Framework & framework, std::unique_ptr<ScreenshotParams> 
   // Always show on full screen.
   showMaximized();
 
-#ifndef NO_DOWNLOADER
-  // Show intro dialog if necessary
-  bool bShow = true;
-  std::string const showWelcome = "ShowWelcome";
-  settings::TryGet(showWelcome, bShow);
-
-  if (bShow)
-  {
-    bool bShowUpdateDialog = true;
-
-    std::string text;
-    try
-    {
-      ReaderPtr<Reader> reader = GetPlatform().GetReader("welcome.html");
-      reader.ReadAsString(text);
-    }
-    catch (...)
-    {}
-
-    if (!text.empty())
-    {
-      InfoDialog welcomeDlg(QString("Welcome to ") + caption, text.c_str(), this, QStringList(tr("Download Maps")));
-      if (welcomeDlg.exec() == QDialog::Rejected)
-        bShowUpdateDialog = false;
-    }
-    settings::Set("ShowWelcome", false);
-
-    if (bShowUpdateDialog)
-      ShowUpdateDialog();
-  }
-#endif  // NO_DOWNLOADER
-
   m_pDrawWidget->UpdateAfterSettingsChanged();
 
   RoutingSettings::LoadSession(m_pDrawWidget->GetFramework());
