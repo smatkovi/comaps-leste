@@ -1,4 +1,4 @@
-# Runtime data: generated into ${CMAKE_BINARY_DIR}/data and installed to share/comaps/data,
+# Runtime data: generated into ${CMAKE_BINARY_DIR}/runtime_data and installed to share/comaps/data,
 # where platform_linux.cpp looks for it (../share/comaps/data next to bin/).
 
 set(GENERATED_DATA_DIR ${CMAKE_BINARY_DIR}/runtime_data)
