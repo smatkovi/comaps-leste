@@ -36,9 +36,6 @@ if (NOT WITH_SYSTEM_PROVIDED_3PARTY)
   # Add pugixml library.
   add_subdirectory(pugixml)
 
-  # Add protobuf library.
-  add_subdirectory(protobuf)
-
   add_library(utf8cpp INTERFACE)
   add_library(utf8cpp::utf8cpp ALIAS utf8cpp)
   target_include_directories(utf8cpp INTERFACE "${OMIM_ROOT}/3party/utfcpp/source")

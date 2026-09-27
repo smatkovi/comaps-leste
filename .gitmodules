@@ -1,6 +1,3 @@
-[submodule "3party/protobuf/protobuf"]
-  path = 3party/protobuf/protobuf
-  url = https://codeberg.org/comaps/protobuf.git
 [submodule "3party/expat"]
   path = 3party/expat
   url = https://github.com/libexpat/libexpat.git

@@ -103,6 +103,7 @@ if (WITH_SYSTEM_PROVIDED_3PARTY)
 endif()
 
 find_package(ZLIB REQUIRED)
+find_package(Protobuf CONFIG REQUIRED)
 
 # Boost is used header-only; take it from the system.
 find_package(Boost 1.85 CONFIG REQUIRED)

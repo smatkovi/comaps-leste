@@ -47,8 +47,6 @@ set(SRC
   drules_selector.hpp
   drules_selector_parser.cpp
   drules_selector_parser.hpp
-  drules_struct.pb.cc
-  drules_struct.pb.h
   dummy_rank_table.cpp
   dummy_rank_table.hpp
   edit_journal.cpp
@@ -156,16 +154,18 @@ set(SRC
   validate_and_format_contacts.hpp
 )
 
-set(OTHER_FILES drules_struct.proto)
-
-# Disable warnings.
-set_source_files_properties(drules_struct.pb.cc PROPERTIES COMPILE_FLAGS
-  "$<$<CXX_COMPILER_ID:AppleClang,Clang>:-Wno-shorten-64-to-32> $<$<CXX_COMPILER_ID:GNU>:-Wno-deprecated-declarations>"
-)
-
-file(COPY ${OTHER_FILES} DESTINATION ${CMAKE_BINARY_DIR})
-
 omim_add_library(${PROJECT_NAME} ${SRC})
+
+# drules_struct.pb.{h,cc} are generated with the system protoc into gen/indexer/,
+# so "indexer/drules_struct.pb.h" resolves through the gen/ include directory.
+protobuf_generate(
+  TARGET ${PROJECT_NAME}
+  LANGUAGE cpp
+  PROTOS ${CMAKE_CURRENT_SOURCE_DIR}/drules_struct.proto
+  IMPORT_DIRS ${CMAKE_CURRENT_SOURCE_DIR}
+  PROTOC_OUT_DIR ${CMAKE_BINARY_DIR}/gen/indexer
+)
+target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_BINARY_DIR}/gen)
 
 target_link_libraries(${PROJECT_NAME}
   PUBLIC
@@ -181,6 +181,6 @@ target_link_libraries(${PROJECT_NAME}
 
 target_link_libraries(${PROJECT_NAME}
   PUBLIC
-    protobuf
+    protobuf::libprotobuf-lite
 )
 

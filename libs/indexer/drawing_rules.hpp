@@ -66,7 +66,6 @@ public:
   uint32_t GetColor(std::string const & name) const;
 
 #ifdef OMIM_OS_DESKTOP
-  void LoadFromTextProto(std::string const & buffer);
   static void SaveToBinaryProto(std::string const & buffer, std::ostream & s);
 #endif
 

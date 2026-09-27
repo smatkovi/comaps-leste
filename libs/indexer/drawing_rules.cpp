@@ -13,7 +13,6 @@
 
 #include <boost/iterator/iterator_facade.hpp>
 
-#include <google/protobuf/text_format.h>
 
 #include "3party/ankerl/unordered_dense.h"
 
