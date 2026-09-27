@@ -192,10 +192,11 @@ target_link_libraries(${PROJECT_NAME}
 
 target_link_libraries(${PROJECT_NAME}
   PUBLIC
+    # Static harfbuzz (with hb-ft) must precede static freetype on the link line.
+    harfbuzz::harfbuzz
     Freetype::Freetype
     vulkan_wrapper
     stb_image
-    harfbuzz::harfbuzz
     expat::expat
     glm::glm-header-only
     OpenGL::GLES3
