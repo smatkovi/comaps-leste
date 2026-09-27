@@ -187,6 +187,10 @@ endif()
 
 find_package(ZLIB REQUIRED)
 
+# Boost is used header-only; take it from the system.
+find_package(Boost 1.85 CONFIG REQUIRED)
+set(3PARTY_INCLUDE_DIRS ${Boost_INCLUDE_DIRS})
+
 # Include 3party dependencies.
 add_subdirectory(3party)
 
@@ -197,7 +201,7 @@ if (PLATFORM_DESKTOP AND NOT WITH_SYSTEM_PROVIDED_3PARTY)
 endif()
 
 # Fix for #include <boost/regex.hpp>
-include_directories("${OMIM_ROOT}/3party/boost")
+include_directories(SYSTEM ${Boost_INCLUDE_DIRS})
 
 
 # Used in qt/ and shaders/

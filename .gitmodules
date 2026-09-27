@@ -10,11 +10,6 @@
 [submodule "3party/Vulkan-Headers"]
   path = 3party/Vulkan-Headers
   url = https://github.com/KhronosGroup/Vulkan-Headers.git
-[submodule "3party/boost"]
-  path = 3party/boost
-  url = https://github.com/boostorg/boost.git
-  branch = boost-1.85.0
-  ignore = dirty
 [submodule "3party/just_gtfs"]
   path = 3party/just_gtfs
   url = https://codeberg.org/comaps/just_gtfs.git
