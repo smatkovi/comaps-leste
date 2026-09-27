@@ -1,7 +1,7 @@
 # Runtime data: generated into ${CMAKE_BINARY_DIR}/data and installed to share/comaps/data,
 # where platform_linux.cpp looks for it (../share/comaps/data next to bin/).
 
-set(GENERATED_DATA_DIR ${CMAKE_BINARY_DIR}/data)
+set(GENERATED_DATA_DIR ${CMAKE_BINARY_DIR}/runtime_data)
 set(GENERATED_DATA_STAMP ${CMAKE_BINARY_DIR}/data.stamp)
 
 add_custom_command(
@@ -10,6 +10,7 @@ add_custom_command(
           $<TARGET_FILE:skin_generator_tool> $<TARGET_FILE:protobuf::protoc>
   COMMAND ${CMAKE_COMMAND} -E touch ${GENERATED_DATA_STAMP}
   DEPENDS skin_generator_tool ${OMIM_ROOT}/tools/generate_data.sh
+  WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
   COMMENT "Generating runtime data"
   USES_TERMINAL
 )
