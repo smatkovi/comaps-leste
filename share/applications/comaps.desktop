@@ -1,9 +1,9 @@
 [Desktop Entry]
 Type=Application
 Version=1.0
-Name=CoMaps
+Name=Maps
 GenericName=Maps
-Comment=Detailed offline maps of the world
+Comment=Offline maps with routing and search
 Exec=comaps
 Icon=comaps
 Terminal=false
