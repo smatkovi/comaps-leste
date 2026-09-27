@@ -93,21 +93,11 @@ elseif(${PLATFORM_ANDROID})
     crypto/ed25519_monocypher.cpp
   )
 else() # neither iPhone nor Android
-  # Find bash first, on Windows it can be either in Git or in WSL
-  find_program(BASH bash REQUIRED HINTS "$ENV{ProgramFiles}/Git/bin")
-  # Generate version header file.
-  execute_process(COMMAND "${BASH}" tools/unix/version.sh qt_version
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-    OUTPUT_VARIABLE OM_VERSION
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-    COMMAND_ERROR_IS_FATAL ANY
-  )
-  execute_process(COMMAND "${BASH}" tools/unix/version.sh qt_int_version
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-    OUTPUT_VARIABLE OM_INT_VERSION
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-    COMMAND_ERROR_IS_FATAL ANY
-  )
+  # Version shown in the app and sent as user agent: build date, overridable by the recipe.
+  string(TIMESTAMP OM_BUILD_DATE "%Y.%m.%d" UTC)
+  set(COMAPS_VERSION "${OM_BUILD_DATE}" CACHE STRING "CoMaps version string")
+  set(OM_VERSION "${COMAPS_VERSION}")
+  string(TIMESTAMP OM_INT_VERSION "%y%m%d" UTC)
   configure_file("${CMAKE_CURRENT_SOURCE_DIR}/platform_qt_version.cpp.in"
                  "${CMAKE_CURRENT_BINARY_DIR}/platform_qt_version.cpp"
                   @ONLY)
