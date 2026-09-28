@@ -70,16 +70,16 @@ public:
   }
 };
 
-bool IsHiddenPoi(EngineContext const & context, feature::TypesHolder const & types)
+bool IsHiddenPoi(ref_ptr<EngineContext> context, feature::TypesHolder const & types)
 {
   static TopLevelChecker const shops({"shop"});
   static TopLevelChecker const tourism({"tourism"});
   static TopLevelChecker const services({"amenity", "office", "craft", "healthcare"});
 
   bool const eat = ftypes::IsEatChecker::Instance()(types);
-  return (context.IsHidden(HiddenFood) && eat) || (context.IsHidden(HiddenShops) && shops(types)) ||
-         (context.IsHidden(HiddenTourism) && tourism(types)) ||
-         (context.IsHidden(HiddenServices) && !eat && services(types));
+  return (context->IsHidden(HiddenFood) && eat) || (context->IsHidden(HiddenShops) && shops(types)) ||
+         (context->IsHidden(HiddenTourism) && tourism(types)) ||
+         (context->IsHidden(HiddenServices) && !eat && services(types));
 }
 
 double GetBuildingHeightInMeters(FeatureType & f)
@@ -456,7 +456,7 @@ void RuleDrawer::operator()(FeatureType & f)
   Stylist s(f, m_zoomLevel, m_deviceLang);
   if (m_context->IsHidden(HiddenHouseNumbers))
     s.m_houseNumberRule = nullptr;
-  if (IsHiddenPoi(*m_context, types))
+  if (IsHiddenPoi(m_context, types))
   {
     s.m_symbolRule = nullptr;
     s.m_captionRule = nullptr;
