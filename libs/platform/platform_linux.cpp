@@ -114,13 +114,12 @@ Platform::Platform()
       if (IsWelcomeExist(dir))
       {
         m_resourcesDir = dir;
-        if (m_writableDir.empty() && IsDirWritable(dir))
-          m_writableDir = m_resourcesDir;
         break;
       }
     }
   }
-  // Use ~/.local/share/CoMaps if resources directory was not writable.
+  // Downloads go to ~/.local/share/CoMaps, never into the resources directory: a package update
+  // replaces its countries.txt, which hides maps downloaded for a newer map version.
   if (!m_resourcesDir.empty() && m_writableDir.empty())
   {
     // The writableLocation does the same for AppDataLocation, AppLocalDataLocation,
