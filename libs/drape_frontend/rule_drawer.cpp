@@ -471,6 +471,13 @@ void RuleDrawer::operator()(FeatureType & f)
     s.m_symbolRule = nullptr;
     s.m_captionRule = nullptr;
   }
+  if (m_context->IsHidden(HiddenBuildings) &&
+      (ftypes::IsBuildingChecker::Instance()(types) || ftypes::IsBuildingPartChecker::Instance()(types)) &&
+      !ftypes::IsBridgeOrTunnelChecker::Instance()(types))
+  {
+    s.m_areaRule = nullptr;
+    s.m_hatchingRule = nullptr;
+  }
 
   // No drawing rules.
   if (!s.m_symbolRule && !s.m_captionRule && !s.m_houseNumberRule && s.m_lineRules.empty() && !s.m_areaRule &&

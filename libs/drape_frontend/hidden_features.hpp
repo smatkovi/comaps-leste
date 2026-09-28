@@ -11,5 +11,6 @@ enum HiddenFeatures : uint32_t
   HiddenTourism = 1u << 2,
   HiddenServices = 1u << 3,
   HiddenHouseNumbers = 1u << 4,
+  HiddenBuildings = 1u << 5,
 };
 }  // namespace df

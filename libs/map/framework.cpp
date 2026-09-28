@@ -2891,7 +2891,7 @@ bool Framework::HasContourLinesLayer()
 
 uint32_t Framework::GetHiddenMapFeatures() const
 {
-  uint32_t mask = df::HiddenHouseNumbers;
+  uint32_t mask = df::HiddenHouseNumbers | df::HiddenBuildings;
   settings::TryGet(kHiddenMapFeaturesKey, mask);
   return mask;
 }
