@@ -1142,6 +1142,19 @@ private:
   bool m_isEnabled = false;
 };
 
+class SetPerspectiveViewMessage : public Message
+{
+public:
+  explicit SetPerspectiveViewMessage(bool enabled) : m_enabled(enabled) {}
+
+  Type GetType() const override { return Type::SetPerspectiveView; }
+
+  bool IsEnabled() const { return m_enabled; }
+
+private:
+  bool m_enabled;
+};
+
 class SetSelectedFeatureMessage : public Message
 {
 public:

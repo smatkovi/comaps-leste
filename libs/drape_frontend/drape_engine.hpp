@@ -246,6 +246,8 @@ public:
   void SetFontScaleFactor(double scaleFactor);
   void SetSymbolScale(double symbolScale);
   void SetRulerEnabled(bool enabled);
+  /// Tilts the map outside navigation; Allow3dMode decides the tilt while navigating.
+  void SetPerspectiveView(bool enabled);
 
   void RunScenario(ScenarioManager::ScenarioData && scenarioData, ScenarioManager::ScenarioCallback const & onStartFn,
                    ScenarioManager::ScenarioCallback const & onFinishFn);

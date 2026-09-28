@@ -555,6 +555,8 @@ public:
 
   void SetWidgetLayout(gui::TWidgetsLayoutInfo && layout);
   void SetRulerEnabled(bool enabled);
+  void SetPerspectiveView(bool enabled);
+  bool LoadPerspectiveView();
 
   void PrepareToShutdown();
 

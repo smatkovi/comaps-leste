@@ -134,6 +134,7 @@ std::string_view constexpr kOutdoorKey = "HasOutdoorLayer";
 std::string_view constexpr kTrafficSimplifiedColorsKey = "TrafficSimplifiedColors";
 std::string_view constexpr kFontScaleFactor = "FontScaleFactor";
 std::string_view constexpr kSymbolScale = "SymbolScale";
+std::string_view constexpr kPerspectiveView = "PerspectiveView";
 std::string_view constexpr kPreferredGraphicsAPI = "PreferredGraphicsAPI";
 std::string_view constexpr kShowDebugInfo = "DebugInfo";
 std::string_view constexpr kScreenViewport = "ScreenClipRect";
@@ -1597,6 +1598,7 @@ void Framework::CreateDrapeEngine(ref_ptr<dp::GraphicsContextFactory> contextFac
   OnSize(params.m_surfaceWidth, params.m_surfaceHeight);
 
   Allow3dMode(allow3d, allow3dBuildings);
+  m_drapeEngine->SetPerspectiveView(LoadPerspectiveView());
 
   RefreshMapLanguage();
 
@@ -1870,6 +1872,20 @@ void Framework::SetWidgetLayout(gui::TWidgetsLayoutInfo && layout)
 {
   ASSERT(m_drapeEngine != nullptr, ());
   m_drapeEngine->SetWidgetLayout(std::move(layout));
+}
+
+void Framework::SetPerspectiveView(bool enabled)
+{
+  settings::Set(kPerspectiveView, enabled);
+  if (m_drapeEngine != nullptr)
+    m_drapeEngine->SetPerspectiveView(enabled);
+}
+
+bool Framework::LoadPerspectiveView()
+{
+  bool enabled = false;
+  settings::TryGet(kPerspectiveView, enabled);
+  return enabled;
 }
 
 void Framework::SetRulerEnabled(bool enabled)

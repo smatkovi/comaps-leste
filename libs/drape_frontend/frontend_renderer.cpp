@@ -186,6 +186,7 @@ FrontendRenderer::FrontendRenderer(Params && params)
   , m_overlayTree(new dp::OverlayTree(VisualParams::Instance().GetVisualScale()))
   , m_searchMarkTextOverlayTree(new dp::OverlayTree(VisualParams::Instance().GetVisualScale()))
   , m_enablePerspectiveInNavigation(false)
+  , m_perspectiveView(false)
   , m_enable3dBuildings(params.m_allow3dBuildings)
   , m_isIsometry(false)
   , m_blockTapEvents(params.m_blockTapEvents)
@@ -336,6 +337,7 @@ void FrontendRenderer::AcceptMessage(ref_ptr<Message> message)
     bool changed = false;
     for (auto const & tileKey : msg->GetTiles())
     {
+      FinishSwap(tileKey);
       if (CheckTileGenerations(tileKey))
       {
         auto it = m_notFinishedTiles.find(tileKey);
@@ -613,6 +615,7 @@ void FrontendRenderer::AcceptMessage(ref_ptr<Message> message)
       ++m_lastRecacheRouteId;
       m_myPositionController->DeactivateRouting();
       m_postprocessRenderer->OnChangedRouteFollowingMode(m_context, false /* active */);
+      UpdatePerspective();
     }
     else
     {
@@ -646,6 +649,7 @@ void FrontendRenderer::AcceptMessage(ref_ptr<Message> message)
     m_myPositionController->DeactivateRouting();
     CHECK(m_context != nullptr, ());
     m_postprocessRenderer->OnChangedRouteFollowingMode(m_context, false /* active */);
+    UpdatePerspective();
     break;
   }
 
@@ -718,9 +722,20 @@ void FrontendRenderer::AcceptMessage(ref_ptr<Message> message)
     if (m_enablePerspectiveInNavigation != msg->AllowPerspective())
     {
       m_enablePerspectiveInNavigation = msg->AllowPerspective();
-      m_myPositionController->EnablePerspectiveInRouting(m_enablePerspectiveInNavigation);
-      // The perspective setting alone decides the tilt, in and out of navigation.
-      AddUserEvent(make_unique_dp<SetAutoPerspectiveEvent>(m_enablePerspectiveInNavigation));
+      m_myPositionController->EnablePerspectiveInRouting(IsPerspectiveInRouting());
+      UpdatePerspective();
+    }
+    break;
+  }
+
+  case Message::Type::SetPerspectiveView:
+  {
+    ref_ptr<SetPerspectiveViewMessage> const msg = message;
+    if (m_perspectiveView != msg->IsEnabled())
+    {
+      m_perspectiveView = msg->IsEnabled();
+      m_myPositionController->EnablePerspectiveInRouting(IsPerspectiveInRouting());
+      UpdatePerspective();
     }
     break;
   }
@@ -874,7 +889,6 @@ void FrontendRenderer::AcceptMessage(ref_ptr<Message> message)
   case Message::Type::UpdateMetalines:
   case Message::Type::EnableIsolines:
   case Message::Type::SetHiddenFeatures:
-  case Message::Type::SetSelectedFeature:
   {
     m_forceUpdateScene = true;
     break;
@@ -1119,12 +1133,9 @@ void FrontendRenderer::UpdateContextDependentResources()
 void FrontendRenderer::FollowRoute(int preferredZoomLevel, int preferredZoomLevelIn3d, bool enableAutoZoom,
                                    bool isArrowGlued, bool allowRouteRotation)
 {
-  m_myPositionController->ActivateRouting(
-      !m_enablePerspectiveInNavigation ? preferredZoomLevel : preferredZoomLevelIn3d, enableAutoZoom, isArrowGlued,
-      allowRouteRotation);
-
-  if (m_enablePerspectiveInNavigation)
-    AddUserEvent(make_unique_dp<SetAutoPerspectiveEvent>(true /* isAutoPerspective */));
+  m_myPositionController->ActivateRouting(IsPerspectiveInRouting() ? preferredZoomLevelIn3d : preferredZoomLevel,
+                                          enableAutoZoom, isArrowGlued, allowRouteRotation);
+  UpdatePerspective();
 
   m_routeRenderer->SetFollowingEnabled(true);
   CHECK(m_context != nullptr, ());
@@ -1362,20 +1373,88 @@ double FrontendRenderer::GetSelectionRadius(ref_ptr<SelectObjectMessage> msg, Sc
   return kSelectionRadius * vs;
 }
 
-void FrontendRenderer::HighlightFeatureCaption(FeatureID const & featureId)
+void FrontendRenderer::HighlightFeatureCaption(FeatureID const & featureId, m2::PointD const & position)
 {
   if (m_highlightedFeature == featureId)
     return;
+
+  // Re-read only the tiles holding the old and the new caption.
+  TTilesCollection tiles;
+  if (m_highlightedFeature.IsValid())
+    AddTilesAround(m_highlightedPosition, tiles);
+  if (featureId.IsValid())
+    AddTilesAround(position, tiles);
   m_highlightedFeature = featureId;
+  m_highlightedPosition = position;
+
   m_commutator->PostMessage(ThreadsCommutator::ResourceUploadThread,
-                            make_unique_dp<SetSelectedFeatureMessage>(featureId), MessagePriority::Normal);
+                            make_unique_dp<SetSelectedFeatureMessage>(featureId), MessagePriority::High);
+  if (!tiles.empty())
+    ReplaceTiles(tiles);
+}
+
+void FrontendRenderer::AddTilesAround(m2::PointD const & position, TTilesCollection & tiles) const
+{
+  m2::RectD const rect(position, position);
+  int const dataZoomLevel = ClipTileZoomByMaxDataZoom(GetCurrentZoom());
+  CalcTilesCoverage(rect, dataZoomLevel, [this, &tiles](int tileX, int tileY)
+  { tiles.insert(TileKey(tileX, tileY, GetCurrentZoom())); });
+}
+
+void FrontendRenderer::ReplaceTiles(TTilesCollection const & tiles)
+{
+  // The old groups keep being drawn while the tiles are read again. The new groups are held back
+  // until their tile is finished and then take over in one frame, so nothing is drawn twice.
+  for (auto & layer : m_layers)
+  {
+    for (auto const & group : layer.m_renderGroups)
+    {
+      if (!group->IsUserMark() && !group->IsPendingOnDelete() && tiles.count(group->GetTileKey()) != 0)
+        group->DeleteLater();
+    }
+  }
+  m_swapTiles.insert(tiles.begin(), tiles.end());
+
+  BaseBlockingMessage::Blocker blocker;
+  m_commutator->PostMessage(ThreadsCommutator::ResourceUploadThread,
+                            make_unique_dp<InvalidateReadManagerRectMessage>(blocker, tiles), MessagePriority::High);
+  blocker.Wait();
+
+  ScreenBase const screen = m_userEventStream.GetCurrentScreen();
+  m_lastReadedModelView = screen;
+  m_requestedTiles->Set(screen, m_isIsometry || screen.isPerspective(), m_forceUpdateScene, m_forceUpdateUserMarks,
+                        ResolveTileKeys(screen));
+  m_commutator->PostMessage(ThreadsCommutator::ResourceUploadThread, make_unique_dp<UpdateReadManagerMessage>(),
+                            MessagePriority::UberHighSingleton);
+}
+
+bool FrontendRenderer::IsWaitingForSwap(ref_ptr<BaseRenderGroup> group) const
+{
+  if (m_swapTiles.empty() || m_swapTiles.count(group->GetTileKey()) == 0)
+    return false;
+  auto const renderGroup = dynamic_cast<RenderGroup const *>(group.get());
+  return renderGroup != nullptr && !renderGroup->IsUserMark() && !renderGroup->IsPendingOnDelete();
+}
+
+void FrontendRenderer::FinishSwap(TileKey const & tileKey)
+{
+  if (m_swapTiles.erase(tileKey) == 0)
+    return;
+  for (size_t i = 0; i < m_layers.size(); ++i)
+  {
+    m_layers[i].m_isDirty |= RemoveGroups(
+        [&tileKey](drape_ptr<RenderGroup> const & group)
+    { return !group->IsUserMark() && group->IsPendingOnDelete() && group->GetTileKey() == tileKey; },
+        m_layers[i].m_renderGroups, GetOverlayTree(static_cast<DepthLayer>(i)));
+  }
+  m_overlayTree->InvalidateOnNextFrame();
 }
 
 void FrontendRenderer::ProcessSelection(ref_ptr<SelectObjectMessage> msg)
 {
   if (msg->IsDismiss())
   {
-    HighlightFeatureCaption({});
+    HighlightFeatureCaption({}, {});
     m_selectionShape->Hide();
     if (msg->ShouldRestoreViewport() && !m_myPositionController->IsModeChangeViewport() && m_selectionTrackInfo)
     {
@@ -1400,10 +1479,10 @@ void FrontendRenderer::ProcessSelection(ref_ptr<SelectObjectMessage> msg)
         offsetZ = std::max(offsetZ, handle->GetPivotZ());
     }
 
-    HighlightFeatureCaption(msg->GetFeatureID());
+    HighlightFeatureCaption(msg->GetFeatureID(), msg->GetPosition());
     if (msg->IsSelectionShapeVisible())
     {
-      m_selectionShape->Show(msg->GetSelectedObject(), msg->GetPosition(), offsetZ, msg->IsAnim(),
+      m_selectionShape->Show(msg->GetSelectedObject(), msg->GetPosition(), offsetZ, false /* isAnimate */,
                              GetSelectionRadius(msg, modelView));
     }
     else
@@ -1435,6 +1514,8 @@ void FrontendRenderer::BeginUpdateOverlayTree(ScreenBase const & modelView)
 
 void FrontendRenderer::UpdateOverlayTree(ScreenBase const & modelView, drape_ptr<RenderGroup> & renderGroup)
 {
+  if (IsWaitingForSwap(make_ref(renderGroup)))
+    return;
   if (m_overlayTree->IsNeedUpdate())
     renderGroup->CollectOverlay(make_ref(m_overlayTree));
   else
@@ -2033,6 +2114,8 @@ void FrontendRenderer::PrepareBucket(dp::RenderState const & state, drape_ptr<dp
 void FrontendRenderer::RenderSingleGroup(ref_ptr<dp::GraphicsContext> context, ScreenBase const & modelView,
                                          ref_ptr<BaseRenderGroup> group)
 {
+  if (IsWaitingForSwap(group))
+    return;
   group->UpdateAnimation();
   group->Render(context, make_ref(m_gpuProgramManager), modelView, m_frameValues, make_ref(m_debugRectRenderer));
 }
@@ -2081,6 +2164,18 @@ void FrontendRenderer::RefreshBgColor()
 
   CHECK(m_context != nullptr, ());
   m_context->SetClearColor(c);
+}
+
+bool FrontendRenderer::IsPerspectiveInRouting() const
+{
+  // Navigation tilts when its own setting asks for it, and stays tilted when the map already was.
+  return m_enablePerspectiveInNavigation || m_perspectiveView;
+}
+
+void FrontendRenderer::UpdatePerspective()
+{
+  bool const perspective = m_myPositionController->IsInRouting() ? IsPerspectiveInRouting() : m_perspectiveView;
+  AddUserEvent(make_unique_dp<SetAutoPerspectiveEvent>(perspective));
 }
 
 void FrontendRenderer::CheckIsometryMinScale(ScreenBase const & screen)
@@ -2390,6 +2485,10 @@ TTilesCollection FrontendRenderer::ResolveTileKeys(ScreenBase const & screen)
       tilesToDelete.push_back(key);
     }
   });
+
+  // A tile that is no longer shown will not finish its swap.
+  for (auto it = m_swapTiles.begin(); it != m_swapTiles.end();)
+    it = tiles.count(*it) != 0 ? std::next(it) : m_swapTiles.erase(it);
 
   // Remove old tiles.
   auto removePredicate = [this, &result, &tilesToDelete](drape_ptr<RenderGroup> const & group)

@@ -236,6 +236,8 @@ private:
   TTilesCollection ResolveTileKeys(ScreenBase const & screen);
   void ResolveZoomLevel(ScreenBase const & screen);
   void UpdateDisplacementEnabled();
+  bool IsPerspectiveInRouting() const;
+  void UpdatePerspective();
   void CheckIsometryMinScale(ScreenBase const & screen);
 
 
@@ -305,7 +307,11 @@ private:
 
   void ProcessSelection(ref_ptr<SelectObjectMessage> msg);
   double GetSelectionRadius(ref_ptr<SelectObjectMessage> msg, ScreenBase const & modelView);
-  void HighlightFeatureCaption(FeatureID const & featureId);
+  void HighlightFeatureCaption(FeatureID const & featureId, m2::PointD const & position);
+  void AddTilesAround(m2::PointD const & position, TTilesCollection & tiles) const;
+  void ReplaceTiles(TTilesCollection const & tiles);
+  bool IsWaitingForSwap(ref_ptr<BaseRenderGroup> group) const;
+  void FinishSwap(TileKey const & tileKey);
 
   void OnPrepareRouteArrows(dp::DrapeID subrouteIndex, std::vector<ArrowBorders> && borders);
   void OnCacheRouteArrows(dp::DrapeID subrouteIndex, std::vector<ArrowBorders> const & borders);
@@ -358,6 +364,7 @@ private:
   FrameValues m_frameValues;
 
   bool m_enablePerspectiveInNavigation;
+  bool m_perspectiveView;  // Tilt outside navigation.
   bool m_enable3dBuildings;
   bool m_isIsometry;
 
@@ -435,6 +442,9 @@ private:
 
   bool m_forceUpdateScene;
   FeatureID m_highlightedFeature;
+  m2::PointD m_highlightedPosition;
+  /// Tiles being read again whose new groups wait for the read to finish, see ReplaceTiles.
+  TTilesCollection m_swapTiles;
   bool m_forceUpdateUserMarks;
 
   drape_ptr<PostprocessRenderer> m_postprocessRenderer;

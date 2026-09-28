@@ -106,6 +106,7 @@ public:
     EnableIsolines,
     SetHiddenFeatures,
     SetSelectedFeature,
+    SetPerspectiveView,
     OnEnterBackground,
     Arrow3dRecache,
     VisualScaleChanged,

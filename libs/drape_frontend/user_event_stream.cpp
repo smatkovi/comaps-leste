@@ -1136,12 +1136,9 @@ void UserEventStream::DetectShortTap(Touch const & touch)
   if (DetectForceTap(touch))
     return;
 
+  // The tap was already reported on release, see EndTapDetector; here the double tap window closes.
   if (m_touchTimer.ElapsedMilliseconds() > kDoubleTapPauseMs)
-  {
     m_state = STATE_EMPTY;
-    if (m_listener)
-      m_listener->OnTap(m2::PointD(touch.m_location), false /* isLongTap */);
-  }
 }
 
 void UserEventStream::DetectLongTap(Touch const & touch)
@@ -1195,6 +1192,10 @@ void UserEventStream::EndTapDetector(Touch const & touch)
   TEST_CALL(SHORT_TAP_DETECTED);
   ASSERT_EQUAL(m_state, STATE_TAP_DETECTION, ());
   m_state = STATE_WAIT_DOUBLE_TAP;
+  // Report the tap right away instead of after the double tap window: selecting stays instant, and a
+  // second tap still zooms in.
+  if (m_listener)
+    m_listener->OnTap(m2::PointD(touch.m_location), false /* isLongTap */);
 }
 
 void UserEventStream::CancelTapDetector()

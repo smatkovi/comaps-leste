@@ -895,6 +895,12 @@ void DrapeEngine::SetSymbolScale(double symbolScale)
                                   MessagePriority::High);
 }
 
+void DrapeEngine::SetPerspectiveView(bool enabled)
+{
+  m_threadCommutator->PostMessage(ThreadsCommutator::RenderThread, make_unique_dp<SetPerspectiveViewMessage>(enabled),
+                                  MessagePriority::Normal);
+}
+
 void DrapeEngine::SetRulerEnabled(bool enabled)
 {
   if (enabled == !m_hiddenRuler)

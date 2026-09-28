@@ -344,11 +344,8 @@ void ReadManager::SetHiddenFeatures(uint32_t mask)
 
 void ReadManager::SetSelectedFeature(FeatureID const & featureId)
 {
-  if (m_selectedFeature != featureId)
-  {
-    m_modeChanged = true;
-    m_selectedFeature = featureId;
-  }
+  // Only the tiles of the old and new selection are re-read, see FrontendRenderer::HighlightFeatureCaption.
+  m_selectedFeature = featureId;
 }
 
 void ReadManager::SetCustomFeatures(CustomFeatures && ids)
