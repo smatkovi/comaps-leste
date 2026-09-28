@@ -876,6 +876,12 @@ void DrapeEngine::EnableIsolines(bool enable)
                                   make_unique_dp<EnableIsolinesMessage>(enable), MessagePriority::Normal);
 }
 
+void DrapeEngine::SetHiddenFeatures(uint32_t mask)
+{
+  m_threadCommutator->PostMessage(ThreadsCommutator::ResourceUploadThread,
+                                  make_unique_dp<SetHiddenFeaturesMessage>(mask), MessagePriority::Normal);
+}
+
 void DrapeEngine::SetFontScaleFactor(double scaleFactor)
 {
   VisualParams::Instance().SetFontScale(scaleFactor);

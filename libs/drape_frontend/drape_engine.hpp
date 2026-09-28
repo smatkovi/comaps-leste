@@ -239,6 +239,7 @@ public:
   void ClearAllTransitSchemeCache();
 
   void EnableIsolines(bool enable);
+  void SetHiddenFeatures(uint32_t mask);
 
   void SetFontScaleFactor(double scaleFactor);
 

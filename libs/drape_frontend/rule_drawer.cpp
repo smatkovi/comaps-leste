@@ -8,6 +8,7 @@
 #include "drape_frontend/traffic_renderer.hpp"
 #include "drape_frontend/visual_params.hpp"
 
+#include "indexer/classificator.hpp"
 #include "indexer/feature.hpp"
 #include "indexer/feature_algo.hpp"
 #include "indexer/feature_data.hpp"
@@ -43,6 +44,7 @@
 
 #include <array>
 #include <functional>
+#include <initializer_list>
 #include <vector>
 
 namespace df
@@ -57,6 +59,28 @@ std::array<size_t, 10> constexpr kAverageSegmentsCount = {
     10000, 5000, 10000, 5000, 2500, 5000, 2000, 1000, 500, 500};
 
 double constexpr kMetersPerLevel = 3.0;
+
+class TopLevelChecker : public ftypes::BaseChecker
+{
+public:
+  explicit TopLevelChecker(std::initializer_list<char const *> roots) : BaseChecker(1 /* level */)
+  {
+    for (auto const * root : roots)
+      m_types.push_back(classif().GetTypeByPath({root}));
+  }
+};
+
+bool IsHiddenPoi(EngineContext const & context, feature::TypesHolder const & types)
+{
+  static TopLevelChecker const shops({"shop"});
+  static TopLevelChecker const tourism({"tourism"});
+  static TopLevelChecker const services({"amenity", "office", "craft", "healthcare"});
+
+  bool const eat = ftypes::IsEatChecker::Instance()(types);
+  return (context.IsHidden(HiddenFood) && eat) || (context.IsHidden(HiddenShops) && shops(types)) ||
+         (context.IsHidden(HiddenTourism) && tourism(types)) ||
+         (context.IsHidden(HiddenServices) && !eat && services(types));
+}
 
 double GetBuildingHeightInMeters(FeatureType & f)
 {
@@ -429,7 +453,14 @@ void RuleDrawer::operator()(FeatureType & f)
   if (ftypes::IsCoastlineChecker::Instance()(types) && !CheckCoastlines(f))
     return;
 
-  Stylist const s(f, m_zoomLevel, m_deviceLang);
+  Stylist s(f, m_zoomLevel, m_deviceLang);
+  if (m_context->IsHidden(HiddenHouseNumbers))
+    s.m_houseNumberRule = nullptr;
+  if (IsHiddenPoi(*m_context, types))
+  {
+    s.m_symbolRule = nullptr;
+    s.m_captionRule = nullptr;
+  }
 
   // No drawing rules.
   if (!s.m_symbolRule && !s.m_captionRule && !s.m_houseNumberRule && s.m_lineRules.empty() && !s.m_areaRule &&

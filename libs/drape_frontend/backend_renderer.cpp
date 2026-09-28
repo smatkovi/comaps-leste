@@ -566,6 +566,15 @@ void BackendRenderer::AcceptMessage(ref_ptr<Message> message)
     break;
   }
 
+  case Message::Type::SetHiddenFeatures:
+  {
+    ref_ptr<SetHiddenFeaturesMessage> msg = message;
+    m_readManager->SetHiddenFeatures(msg->GetMask());
+    m_commutator->PostMessage(ThreadsCommutator::RenderThread, make_unique_dp<SetHiddenFeaturesMessage>(msg->GetMask()),
+                              MessagePriority::Normal);
+    break;
+  }
+
   case Message::Type::DrapeApiAddLines:
   {
     ref_ptr<DrapeApiAddLinesMessage> msg = message;

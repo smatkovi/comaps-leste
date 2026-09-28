@@ -128,6 +128,7 @@ std::string_view constexpr kMapModeKey = "MapMode";
 std::string_view constexpr kMapModeDrivingTrafficKey = "DrivingModeHasTraffic";
 std::string_view constexpr kMapModePublicTransportTransitLinesKey = "PublicTransportModeHasTransitLines";
 std::string_view constexpr kContourLinesKey = "HasContourLinesLayer";
+std::string_view constexpr kHiddenMapFeaturesKey = "HiddenMapFeatures";
 std::string_view constexpr kOutdoorKey = "HasOutdoorLayer";
 std::string_view constexpr kTrafficSimplifiedColorsKey = "TrafficSimplifiedColors";
 std::string_view constexpr kLargeFontsSize = "LargeFontsSize";
@@ -1608,6 +1609,7 @@ void Framework::CreateDrapeEngine(ref_ptr<dp::GraphicsContextFactory> contextFac
   m_trafficManager.SetDrapeEngine(make_ref(m_drapeEngine));
   m_transitManager.SetDrapeEngine(make_ref(m_drapeEngine));
   m_isolinesManager.SetDrapeEngine(make_ref(m_drapeEngine));
+  m_drapeEngine->SetHiddenFeatures(GetHiddenMapFeatures());
   m_searchMarks.SetDrapeEngine(make_ref(m_drapeEngine));
 
   InvalidateUserMarks();
@@ -2851,6 +2853,20 @@ bool Framework::HasContourLinesLayer()
   if (!settings::Get(kContourLinesKey, hasContourLines) && !settings::Get(kOldIsolinesEnabledKey, hasContourLines))
     hasContourLines = false;
   return hasContourLines;
+}
+
+uint32_t Framework::GetHiddenMapFeatures() const
+{
+  uint32_t mask = 0;
+  settings::TryGet(kHiddenMapFeaturesKey, mask);
+  return mask;
+}
+
+void Framework::SetHiddenMapFeatures(uint32_t mask)
+{
+  settings::Set(kHiddenMapFeaturesKey, mask);
+  if (m_drapeEngine != nullptr)
+    m_drapeEngine->SetHiddenFeatures(mask);
 }
 
 void Framework::SetContourLinesLayer(bool const hasContourLines)

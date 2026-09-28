@@ -308,6 +308,9 @@ public:
   /// Set if the map has 3D buildings
   void SetBuildings3d(bool const hasBuildings3d);
 
+  uint32_t GetHiddenMapFeatures() const;
+  void SetHiddenMapFeatures(uint32_t mask);
+
   /// If the vehicle style is being used
   bool IsUsingVehicleStyle();
 

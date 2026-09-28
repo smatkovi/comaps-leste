@@ -1142,6 +1142,19 @@ private:
   bool m_isEnabled = false;
 };
 
+class SetHiddenFeaturesMessage : public Message
+{
+public:
+  explicit SetHiddenFeaturesMessage(uint32_t mask) : m_mask(mask) {}
+
+  Type GetType() const override { return Type::SetHiddenFeatures; }
+
+  uint32_t GetMask() const { return m_mask; }
+
+private:
+  uint32_t m_mask = 0;
+};
+
 class EnableTransitSchemeMessage : public Message
 {
 public:
