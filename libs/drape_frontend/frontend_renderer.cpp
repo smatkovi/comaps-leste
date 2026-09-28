@@ -707,14 +707,6 @@ void FrontendRenderer::AcceptMessage(ref_ptr<Message> message)
     ref_ptr<Allow3dModeMessage> const msg = message;
     ScreenBase const & screen = m_userEventStream.GetCurrentScreen();
 
-#ifdef OMIM_OS_DESKTOP
-    if (m_enablePerspectiveInNavigation == msg->AllowPerspective() &&
-        m_enablePerspectiveInNavigation != screen.isPerspective())
-    {
-      AddUserEvent(make_unique_dp<SetAutoPerspectiveEvent>(m_enablePerspectiveInNavigation));
-    }
-#endif
-
     if (m_enable3dBuildings != msg->Allow3dBuildings())
     {
       m_enable3dBuildings = msg->Allow3dBuildings();
