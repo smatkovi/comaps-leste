@@ -43,6 +43,11 @@ int main(int argc, char * argv[])
   // See http://dbaron.org/log/20121222-locale for more details.
   (void)::setenv("LC_NUMERIC", "C", 1);
 
+  // Without any locale variable there is no system language, which CoMaps needs (map labels, search).
+  if (!qEnvironmentVariableIsSet("LANGUAGE") && !qEnvironmentVariableIsSet("LC_ALL") &&
+      !qEnvironmentVariableIsSet("LC_MESSAGES") && !qEnvironmentVariableIsSet("LANG"))
+    qputenv("LANG", "en_US.UTF-8");
+
   Platform & platform = GetPlatform();
 
   LOG(LINFO, ("CoMaps", platform.Version(), "built with QT:", QT_VERSION_STR, "runtime QT:", qVersion(),
