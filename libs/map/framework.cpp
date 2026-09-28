@@ -132,7 +132,6 @@ std::string_view constexpr kContourLinesKey = "HasContourLinesLayer";
 std::string_view constexpr kHiddenMapFeaturesKey = "HiddenMapFeatures";
 std::string_view constexpr kOutdoorKey = "HasOutdoorLayer";
 std::string_view constexpr kTrafficSimplifiedColorsKey = "TrafficSimplifiedColors";
-std::string_view constexpr kLargeFontsSize = "LargeFontsSize";
 std::string_view constexpr kFontScaleFactor = "FontScaleFactor";
 std::string_view constexpr kSymbolScale = "SymbolScale";
 std::string_view constexpr kPreferredGraphicsAPI = "PreferredGraphicsAPI";
@@ -2572,12 +2571,9 @@ void Framework::Load3dMode(bool & allow3d, bool & allow3dBuildings)
 
 double Framework::LoadFontScaleFactor()
 {
-  bool isLargeSize;
   double scaleFactor;
-  if (!settings::Get(kLargeFontsSize, isLargeSize))
-    isLargeSize = false;
   if (!settings::Get(kFontScaleFactor, scaleFactor))
-    scaleFactor = isLargeSize ? 1.6 : 1.3;
+    scaleFactor = 1.6;
   return scaleFactor;
 }
 
@@ -2603,7 +2599,7 @@ double Framework::LoadSymbolScale()
 {
   double scale;
   if (!settings::Get(kSymbolScale, scale))
-    scale = 1.25;
+    scale = 1.5;
   return scale;
 }
 
