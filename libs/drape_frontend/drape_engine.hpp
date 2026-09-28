@@ -40,6 +40,7 @@
 #include <atomic>
 #include <functional>
 #include <map>
+#include <optional>
 #include <utility>
 #include <vector>
 
@@ -126,6 +127,7 @@ public:
     OnGraphicsContextInitialized m_onGraphicsContextInitialized;
     dp::RenderInjectionHandler m_renderInjectionHandler;
     bool m_forceMapStyleRerendering;
+    double m_symbolScale = 1.0;
   };
 
   DrapeEngine(Params && params);
@@ -242,6 +244,8 @@ public:
   void SetHiddenFeatures(uint32_t mask);
 
   void SetFontScaleFactor(double scaleFactor);
+  void SetSymbolScale(double symbolScale);
+  void SetRulerEnabled(bool enabled);
 
   void RunScenario(ScenarioManager::ScenarioData && scenarioData, ScenarioManager::ScenarioCallback const & onStartFn,
                    ScenarioManager::ScenarioCallback const & onFinishFn);
@@ -305,6 +309,7 @@ private:
 
   gui::TWidgetsInitInfo m_widgetsInfo;
   gui::TWidgetsLayoutInfo m_widgetsLayout;
+  std::optional<gui::Position> m_hiddenRuler;
 
   bool m_choosePositionMode = false;
   bool m_kineticScrollEnabled = true;

@@ -62,6 +62,9 @@ public:
   uint32_t GetGlyphSdfScale() const;
   double GetFontScale() const;
   void SetFontScale(double fontScale);
+  /// Multiplies the visual scale when choosing the density of symbol textures, so icons get bigger.
+  double GetSymbolScale() const;
+  void SetSymbolScale(double symbolScale);
 
   // This method can be called ONLY if rendering is disabled.
   void SetVisualScale(double visualScale);
@@ -75,6 +78,7 @@ private:
   double m_visualScale = 0.0;
   double m_poiExtendScale = 0.1;  // Found empirically.
   std::atomic<double> m_fontScale = 1.0;
+  std::atomic<double> m_symbolScale = 1.0;
 
   DISALLOW_COPY_AND_MOVE(VisualParams);
 };

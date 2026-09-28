@@ -34,6 +34,7 @@
 #include "drape_frontend/color_constants.hpp"
 #include "drape_frontend/frontend_renderer.hpp"
 #include "drape_frontend/gps_track_point.hpp"
+#include "drape_frontend/hidden_features.hpp"
 #include "drape_frontend/map_data_provider.hpp"
 #include "drape_frontend/postprocess_renderer.hpp"
 #include "drape_frontend/selection_shape.hpp"
@@ -133,6 +134,7 @@ std::string_view constexpr kOutdoorKey = "HasOutdoorLayer";
 std::string_view constexpr kTrafficSimplifiedColorsKey = "TrafficSimplifiedColors";
 std::string_view constexpr kLargeFontsSize = "LargeFontsSize";
 std::string_view constexpr kFontScaleFactor = "FontScaleFactor";
+std::string_view constexpr kSymbolScale = "SymbolScale";
 std::string_view constexpr kPreferredGraphicsAPI = "PreferredGraphicsAPI";
 std::string_view constexpr kShowDebugInfo = "DebugInfo";
 std::string_view constexpr kScreenViewport = "ScreenClipRect";
@@ -1581,6 +1583,7 @@ void Framework::CreateDrapeEngine(ref_ptr<dp::GraphicsContextFactory> contextFac
       simplifiedTrafficColors, std::nullopt /* arrow3dCustomDecl */, std::move(overlaysShowStatsFn),
       std::move(onGraphicsContextInitialized), std::move(params.m_renderInjectionHandler));
 
+  p.m_symbolScale = LoadSymbolScale();
   m_drapeEngine = make_unique_dp<df::DrapeEngine>(std::move(p));
   m_drapeEngine->SetModelViewListener([this](ScreenBase const & screen)
   { GetPlatform().RunTask(Platform::Thread::Gui, [this, screen]() { OnViewportChanged(screen); }); });
@@ -1868,6 +1871,12 @@ void Framework::SetWidgetLayout(gui::TWidgetsLayoutInfo && layout)
 {
   ASSERT(m_drapeEngine != nullptr, ());
   m_drapeEngine->SetWidgetLayout(std::move(layout));
+}
+
+void Framework::SetRulerEnabled(bool enabled)
+{
+  if (m_drapeEngine != nullptr)
+    m_drapeEngine->SetRulerEnabled(enabled);
 }
 
 Framework::ParsedRoutingData Framework::GetParsedRoutingData() const
@@ -2568,7 +2577,7 @@ double Framework::LoadFontScaleFactor()
   if (!settings::Get(kLargeFontsSize, isLargeSize))
     isLargeSize = false;
   if (!settings::Get(kFontScaleFactor, scaleFactor))
-    scaleFactor = isLargeSize ? 1.6 : 1.0;
+    scaleFactor = isLargeSize ? 1.6 : 1.3;
   return scaleFactor;
 }
 
@@ -2580,6 +2589,22 @@ void Framework::SetFontScaleFactor(double scaleFactor)
   m_drapeEngine->SetFontScaleFactor(scaleFactor);
 
   InvalidateRect(GetCurrentViewport());
+}
+
+void Framework::SetSymbolScale(double scale)
+{
+  settings::Set(kSymbolScale, scale);
+
+  ASSERT(m_drapeEngine.get() != nullptr, ());
+  m_drapeEngine->SetSymbolScale(scale);
+}
+
+double Framework::LoadSymbolScale()
+{
+  double scale;
+  if (!settings::Get(kSymbolScale, scale))
+    scale = 1.25;
+  return scale;
 }
 
 bool Framework::LoadTrafficSimplifiedColors()
@@ -2857,7 +2882,7 @@ bool Framework::HasContourLinesLayer()
 
 uint32_t Framework::GetHiddenMapFeatures() const
 {
-  uint32_t mask = 0;
+  uint32_t mask = df::HiddenHouseNumbers;
   settings::TryGet(kHiddenMapFeaturesKey, mask);
   return mask;
 }

@@ -554,6 +554,7 @@ public:
   void SetupMeasurementSystem();
 
   void SetWidgetLayout(gui::TWidgetsLayoutInfo && layout);
+  void SetRulerEnabled(bool enabled);
 
   void PrepareToShutdown();
 
@@ -808,6 +809,8 @@ public:
 
   void SetFontScaleFactor(double scaleFactor);
   double LoadFontScaleFactor();
+  void SetSymbolScale(double scale);
+  double LoadSymbolScale();
 
   bool LoadAutoZoom();
   void AllowAutoZoom(bool allowAutoZoom);

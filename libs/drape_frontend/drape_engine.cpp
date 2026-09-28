@@ -55,6 +55,7 @@ DrapeEngine::DrapeEngine(Params && params)
   VisualParams::Init(params.m_vs, df::CalculateTileSize(m_viewport.GetWidth(), m_viewport.GetHeight()));
 
   SetFontScaleFactor(params.m_fontsScaleFactor);
+  VisualParams::Instance().SetSymbolScale(params.m_symbolScale);
 
   gui::DrapeGui::Instance().SetSurfaceSize(m2::PointF(m_viewport.GetWidth(), m_viewport.GetHeight()));
 
@@ -885,6 +886,34 @@ void DrapeEngine::SetHiddenFeatures(uint32_t mask)
 void DrapeEngine::SetFontScaleFactor(double scaleFactor)
 {
   VisualParams::Instance().SetFontScale(scaleFactor);
+}
+
+void DrapeEngine::SetSymbolScale(double symbolScale)
+{
+  VisualParams::Instance().SetSymbolScale(symbolScale);
+  m_threadCommutator->PostMessage(ThreadsCommutator::RenderThread, make_unique_dp<UpdateVisualScaleMessage>(),
+                                  MessagePriority::High);
+}
+
+void DrapeEngine::SetRulerEnabled(bool enabled)
+{
+  if (enabled == !m_hiddenRuler)
+    return;
+
+  if (enabled)
+  {
+    m_widgetsInfo.emplace(gui::WIDGET_RULER, *m_hiddenRuler);
+    m_hiddenRuler.reset();
+  }
+  else
+  {
+    auto const it = m_widgetsInfo.find(gui::WIDGET_RULER);
+    if (it == m_widgetsInfo.end())
+      return;
+    m_hiddenRuler = it->second;
+    m_widgetsInfo.erase(it);
+  }
+  RecacheGui(true /* needResetOldGui */);
 }
 
 void DrapeEngine::RunScenario(ScenarioManager::ScenarioData && scenarioData,

@@ -67,6 +67,16 @@ void VisualParams::SetFontScale(double fontScale)
   m_fontScale = math::Clamp(fontScale, 0.5, 4.0);
 }
 
+double VisualParams::GetSymbolScale() const
+{
+  return m_symbolScale;
+}
+
+void VisualParams::SetSymbolScale(double symbolScale)
+{
+  m_symbolScale = math::Clamp(symbolScale, 0.5, 2.0);
+}
+
 void VisualParams::SetVisualScale(double visualScale)
 {
   ASSERT_INITED;
@@ -107,7 +117,7 @@ std::string const & VisualParams::GetResourcePostfix(double visualScale)
 std::string const & VisualParams::GetResourcePostfix() const
 {
   ASSERT_INITED;
-  return VisualParams::GetResourcePostfix(m_visualScale);
+  return VisualParams::GetResourcePostfix(m_visualScale * m_symbolScale);
 }
 
 double VisualParams::GetVisualScale() const
