@@ -23,18 +23,25 @@ void MapFilesDownloader::DownloadMapFile(QueuedCountry && queuedCountry)
 
 void MapFilesDownloader::RunMetaConfigAsync(std::function<void()> && callback)
 {
+  m_metaConfigCallbacks.push_back(std::move(callback));
+  if (m_isMetaConfigRequested)
+    return;
   m_isMetaConfigRequested = true;
 
-  GetPlatform().RunTask(Platform::Thread::Network, [this, callback = std::move(callback)]()
+  GetPlatform().RunTask(Platform::Thread::Network, [this]()
   {
-    GetMetaConfig([this, callback = std::move(callback)](MetaConfig const & metaConfig)
+    GetMetaConfig([this](MetaConfig const & metaConfig)
     {
       m_serversList = metaConfig.m_serversList;
       settings::Update(metaConfig.m_settings);
-      callback();
 
       // Reset flag to invoke servers list downloading next time if current request has failed.
       m_isMetaConfigRequested = false;
+
+      auto const callbacks = std::move(m_metaConfigCallbacks);
+      m_metaConfigCallbacks.clear();
+      for (auto const & fn : callbacks)
+        fn();
     });
   });
 }
@@ -109,8 +116,17 @@ void MapFilesDownloader::DownloadAsString(std::string url, std::function<bool(st
 {
   EnsureMetaConfigReady([this, forceReset, url = std::move(url), callback = std::move(callback)]()
   {
-    if ((m_fileRequest && !forceReset) || m_serversList.empty())
+    if (m_fileRequest && !forceReset)
       return;
+
+    // No servers (the meta config request failed): report an empty result, so callers can finish
+    // instead of waiting forever. This runs from a posted task, never from m_fileRequest's own callback.
+    if (m_serversList.empty())
+    {
+      m_fileRequest.reset();
+      callback({});
+      return;
+    }
 
     /// @todo(pastk): try to download from several servers - similar to map files
     // Servers are sorted from best to worst.
@@ -135,17 +151,9 @@ void MapFilesDownloader::EnsureMetaConfigReady(std::function<void()> && callback
 {
   /// @todo Implement logic if m_metaConfig is "outdated".
   if (!m_serversList.empty())
-  {
     callback();
-  }
-  else if (!m_isMetaConfigRequested)
-  {
-    RunMetaConfigAsync(std::move(callback));
-  }
   else
-  {
-    // skip this request without callback call
-  }
+    RunMetaConfigAsync(std::move(callback));
 }
 
 std::vector<std::string> MapFilesDownloader::MakeUrlListLegacy(std::string const & fileName) const

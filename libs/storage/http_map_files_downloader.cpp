@@ -57,7 +57,7 @@ void HttpMapFilesDownloader::Download()
 
   m_request.reset();
 
-  if (IsDownloadingAllowed())
+  if (IsDownloadingAllowed() && !urls.empty())
   {
     queuedCountry.OnStartDownloading();
 
@@ -65,7 +65,10 @@ void HttpMapFilesDownloader::Download()
         urls, path, size, std::bind(&HttpMapFilesDownloader::OnMapFileDownloaded, this, queuedCountry, _1),
         std::bind(&HttpMapFilesDownloader::OnMapFileDownloadingProgress, this, queuedCountry, _1)));
   }
-  else
+
+  // Not allowed, no servers, or the file couldn't be created: fail now, otherwise the country
+  // stays first in the queue forever and blocks every later download and retry.
+  if (!m_request)
   {
     ErrorHttpRequest error(path);
     auto const copy = queuedCountry;

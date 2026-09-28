@@ -119,6 +119,8 @@ private:
 
   /// Used as guard for m_serversList assign.
   std::atomic_bool m_isMetaConfigRequested = false;
+  /// Callbacks waiting for the requested meta config; all run when it arrives, even if it failed.
+  std::vector<std::function<void()>> m_metaConfigCallbacks;
 
   DownloadingPolicy * m_downloadingPolicy = nullptr;
 
