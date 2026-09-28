@@ -36,6 +36,7 @@ install(DIRECTORY
 install(FILES
   ${GENERATED_DATA_DIR}/welcome.html
   ${GENERATED_DATA_DIR}/categories.txt
+  ${GENERATED_DATA_DIR}/categories_brands.txt
   ${GENERATED_DATA_DIR}/classificator.txt
   ${GENERATED_DATA_DIR}/colors.txt
   ${GENERATED_DATA_DIR}/copyright.html
