@@ -43,7 +43,8 @@ public:
   SelectionShape(ref_ptr<dp::GraphicsContext> context, ref_ptr<dp::TextureManager> mng);
 
   void SetPosition(m2::PointD const & position) { m_position = position; }
-  void Show(ESelectedObject obj, m2::PointD const & position, double positionZ, bool isAnimate);
+  /// @param radius  Radius of the selection circle in pixels.
+  void Show(ESelectedObject obj, m2::PointD const & position, double positionZ, bool isAnimate, double radius);
   void Hide();
   void Render(ref_ptr<dp::GraphicsContext> context, ref_ptr<gpu::ProgramManager> mng, ScreenBase const & screen,
               int zoomLevel, FrameValues const & frameValues);
@@ -61,6 +62,7 @@ public:
 
 private:
   bool IsVisible() const;
+  void SetRadius(double radius);
 
   m2::PointD m_position;
   double m_positionZ;

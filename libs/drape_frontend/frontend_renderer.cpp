@@ -79,6 +79,11 @@ namespace
 {
 float constexpr kIsometryAngle = static_cast<float>(math::pi) * 76.0f / 180.0f;
 double constexpr kVSyncInterval = 0.06;
+
+// Selection circle radii and the width of the ring around a selected icon, in pixels at visual scale 1.
+double constexpr kSelectionRadius = 15.0;
+double constexpr kPointSelectionRadius = 0.75 * kSelectionRadius;
+double constexpr kIconSelectionBorder = 3.0;
 // Metal/Vulkan rendering is fast, so we can decrease sync inverval.
 double constexpr kVSyncIntervalMetalVulkan = 0.03;
 
@@ -608,8 +613,6 @@ void FrontendRenderer::AcceptMessage(ref_ptr<Message> message)
       ++m_lastRecacheRouteId;
       m_myPositionController->DeactivateRouting();
       m_postprocessRenderer->OnChangedRouteFollowingMode(m_context, false /* active */);
-      if (m_enablePerspectiveInNavigation)
-        DisablePerspective();
     }
     else
     {
@@ -643,8 +646,6 @@ void FrontendRenderer::AcceptMessage(ref_ptr<Message> message)
     m_myPositionController->DeactivateRouting();
     CHECK(m_context != nullptr, ());
     m_postprocessRenderer->OnChangedRouteFollowingMode(m_context, false /* active */);
-    if (m_enablePerspectiveInNavigation)
-      DisablePerspective();
     break;
   }
 
@@ -718,8 +719,8 @@ void FrontendRenderer::AcceptMessage(ref_ptr<Message> message)
     {
       m_enablePerspectiveInNavigation = msg->AllowPerspective();
       m_myPositionController->EnablePerspectiveInRouting(m_enablePerspectiveInNavigation);
-      if (m_myPositionController->IsInRouting())
-        AddUserEvent(make_unique_dp<SetAutoPerspectiveEvent>(m_enablePerspectiveInNavigation));
+      // The perspective setting alone decides the tilt, in and out of navigation.
+      AddUserEvent(make_unique_dp<SetAutoPerspectiveEvent>(m_enablePerspectiveInNavigation));
     }
     break;
   }
@@ -873,6 +874,7 @@ void FrontendRenderer::AcceptMessage(ref_ptr<Message> message)
   case Message::Type::UpdateMetalines:
   case Message::Type::EnableIsolines:
   case Message::Type::SetHiddenFeatures:
+  case Message::Type::SetSelectedFeature:
   {
     m_forceUpdateScene = true;
     break;
@@ -1334,10 +1336,46 @@ void FrontendRenderer::PullToBoundArea(bool randomPlace, bool applyZoom)
   }
 }
 
+double FrontendRenderer::GetSelectionRadius(ref_ptr<SelectObjectMessage> msg, ScreenBase const & modelView)
+{
+  double const vs = VisualParams::Instance().GetVisualScale();
+  if (msg->GetSelectedObject() != SelectionShape::OBJECT_POI)
+    return kSelectionRadius * vs;
+
+  // A tap on an empty spot: a small marker.
+  if (!msg->GetFeatureID().IsValid())
+    return kPointSelectionRadius * vs;
+
+  // A POI: a ring around its icon, whatever the icon size is.
+  if (m_overlayTree->IsNeedUpdate())
+    BuildOverlayTree(modelView);
+  dp::TOverlayContainer handles;
+  m_overlayTree->Select(msg->GetPosition(), handles);
+  for (ref_ptr<dp::OverlayHandle> const & handle : handles)
+  {
+    // Sub id of the icon of a point feature, see ApplyPointFeature::ProcessPointRules.
+    if (handle->GetOverlayID().m_featureId != msg->GetFeatureID() || handle->GetOverlaySubID() != 2)
+      continue;
+    m2::RectD const rect = handle->GetPixelRect(modelView, false /* perspective */);
+    return 0.5 * std::max(rect.SizeX(), rect.SizeY()) + kIconSelectionBorder * vs;
+  }
+  return kSelectionRadius * vs;
+}
+
+void FrontendRenderer::HighlightFeatureCaption(FeatureID const & featureId)
+{
+  if (m_highlightedFeature == featureId)
+    return;
+  m_highlightedFeature = featureId;
+  m_commutator->PostMessage(ThreadsCommutator::ResourceUploadThread,
+                            make_unique_dp<SetSelectedFeatureMessage>(featureId), MessagePriority::Normal);
+}
+
 void FrontendRenderer::ProcessSelection(ref_ptr<SelectObjectMessage> msg)
 {
   if (msg->IsDismiss())
   {
+    HighlightFeatureCaption({});
     m_selectionShape->Hide();
     if (msg->ShouldRestoreViewport() && !m_myPositionController->IsModeChangeViewport() && m_selectionTrackInfo)
     {
@@ -1362,10 +1400,16 @@ void FrontendRenderer::ProcessSelection(ref_ptr<SelectObjectMessage> msg)
         offsetZ = std::max(offsetZ, handle->GetPivotZ());
     }
 
+    HighlightFeatureCaption(msg->GetFeatureID());
     if (msg->IsSelectionShapeVisible())
-      m_selectionShape->Show(msg->GetSelectedObject(), msg->GetPosition(), offsetZ, msg->IsAnim());
+    {
+      m_selectionShape->Show(msg->GetSelectedObject(), msg->GetPosition(), offsetZ, msg->IsAnim(),
+                             GetSelectionRadius(msg, modelView));
+    }
     else
+    {
       m_selectionShape->Hide();
+    }
 
     if (!m_myPositionController->IsModeChangeViewport())
     {
@@ -2037,11 +2081,6 @@ void FrontendRenderer::RefreshBgColor()
 
   CHECK(m_context != nullptr, ());
   m_context->SetClearColor(c);
-}
-
-void FrontendRenderer::DisablePerspective()
-{
-  AddUserEvent(make_unique_dp<SetAutoPerspectiveEvent>(false /* isAutoPerspective */));
 }
 
 void FrontendRenderer::CheckIsometryMinScale(ScreenBase const & screen)

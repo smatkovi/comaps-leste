@@ -68,6 +68,9 @@ public:
                          CaptionRuleProto const * houseNumberRule, m2::PointD const & centerPoint,
                          ref_ptr<dp::TextureManager> texMng);
 
+  /// Draws the caption in white, to mark the selected feature on a dark map.
+  void SetHighlightCaption(bool highlight) { m_highlightCaption = highlight; }
+
 protected:
   void ExtractCaptionParams(CaptionDefProto const * primaryProto, CaptionDefProto const * secondaryProto,
                             TextViewParams & params) const;
@@ -75,6 +78,8 @@ protected:
 
 private:
   virtual bool HasArea() const { return false; }
+
+  bool m_highlightCaption = false;
 };
 
 class ApplyAreaFeature : public ApplyPointFeature

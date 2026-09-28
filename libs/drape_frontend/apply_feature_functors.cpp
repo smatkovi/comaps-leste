@@ -633,6 +633,11 @@ void ApplyPointFeature::ProcessPointRules(SymbolRuleProto const * symbolRule, Ca
     params.m_depth = PriorityToDepth(captionRule->priority(), drule::caption, 0);
     params.m_hasArea = HasArea();
     params.m_createdByEditor = createdByEditor;
+    if (m_highlightCaption)
+    {
+      params.m_titleDecl.m_primaryTextFont.m_color = dp::Color::White();
+      params.m_titleDecl.m_secondaryTextFont.m_color = dp::Color::White();
+    }
 
     ASSERT(!(symbolRule && params.m_titleDecl.m_anchor == dp::Anchor::Center),
            ("A `text-offset: *` is not set in styles.", m_f.GetID(), m_f.DebugString()));

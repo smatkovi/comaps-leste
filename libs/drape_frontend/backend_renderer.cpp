@@ -566,6 +566,15 @@ void BackendRenderer::AcceptMessage(ref_ptr<Message> message)
     break;
   }
 
+  case Message::Type::SetSelectedFeature:
+  {
+    ref_ptr<SetSelectedFeatureMessage> msg = message;
+    m_readManager->SetSelectedFeature(msg->GetFeatureID());
+    m_commutator->PostMessage(ThreadsCommutator::RenderThread,
+                              make_unique_dp<SetSelectedFeatureMessage>(msg->GetFeatureID()), MessagePriority::Normal);
+    break;
+  }
+
   case Message::Type::SetHiddenFeatures:
   {
     ref_ptr<SetHiddenFeaturesMessage> msg = message;

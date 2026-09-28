@@ -9,6 +9,8 @@
 
 #include "drape/pointers.hpp"
 
+#include "indexer/feature_decl.hpp"
+
 #include <functional>
 
 namespace dp
@@ -27,13 +29,14 @@ public:
   EngineContext(TileKey tileKey, ref_ptr<ThreadsCommutator> commutator, ref_ptr<dp::TextureManager> texMng,
                 ref_ptr<MetalineManager> metalineMng, CustomFeaturesContextWeakPtr customFeaturesContext,
                 bool is3dBuildingsEnabled, bool isTrafficEnabled, bool isolinesEnabled, uint32_t hiddenFeatures,
-                int8_t mapLangIndex);
+                FeatureID const & selectedFeature, int8_t mapLangIndex);
 
   TileKey const & GetTileKey() const { return m_tileKey; }
   bool Is3dBuildingsEnabled() const { return m_3dBuildingsEnabled; }
   bool IsTrafficEnabled() const { return m_trafficEnabled; }
   bool IsolinesEnabled() const { return m_isolinesEnabled; }
   bool IsHidden(HiddenFeatures group) const { return (m_hiddenFeatures & group) != 0; }
+  FeatureID const & GetSelectedFeature() const { return m_selectedFeature; }
   int8_t GetMapLangIndex() const { return m_mapLangIndex; }
   CustomFeaturesContextWeakPtr GetCustomFeaturesContext() const { return m_customFeaturesContext; }
   ref_ptr<dp::TextureManager> GetTextureManager() const;
@@ -57,6 +60,7 @@ private:
   bool m_trafficEnabled;
   bool m_isolinesEnabled;
   uint32_t m_hiddenFeatures;
+  FeatureID m_selectedFeature;
   int8_t m_mapLangIndex;
 };
 }  // namespace df

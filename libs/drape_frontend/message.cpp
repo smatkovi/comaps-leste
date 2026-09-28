@@ -104,6 +104,7 @@ std::string DebugPrint(Message::Type msgType)
   case Message::Type::SetAccessibilityDataHandler: return "SetAccessibilityDataHandler";
   case Message::Type::EnableIsolines: return "EnableIsolines";
   case Message::Type::SetHiddenFeatures: return "SetHiddenFeatures";
+  case Message::Type::SetSelectedFeature: return "SetSelectedFeature";
   case Message::Type::OnEnterBackground: return "OnEnterBackground";
   case Message::Type::Arrow3dRecache: return "Arrow3dRecache";
   case Message::Type::VisualScaleChanged: return "VisualScaleChanged";

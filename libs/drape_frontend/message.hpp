@@ -105,6 +105,7 @@ public:
     SetAccessibilityDataHandler,
     EnableIsolines,
     SetHiddenFeatures,
+    SetSelectedFeature,
     OnEnterBackground,
     Arrow3dRecache,
     VisualScaleChanged,

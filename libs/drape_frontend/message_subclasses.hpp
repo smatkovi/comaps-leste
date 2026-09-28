@@ -1142,6 +1142,19 @@ private:
   bool m_isEnabled = false;
 };
 
+class SetSelectedFeatureMessage : public Message
+{
+public:
+  explicit SetSelectedFeatureMessage(FeatureID const & featureId) : m_featureId(featureId) {}
+
+  Type GetType() const override { return Type::SetSelectedFeature; }
+
+  FeatureID const & GetFeatureID() const { return m_featureId; }
+
+private:
+  FeatureID m_featureId;
+};
+
 class SetHiddenFeaturesMessage : public Message
 {
 public:

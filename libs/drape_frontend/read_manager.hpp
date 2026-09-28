@@ -58,6 +58,7 @@ public:
   void SetTrafficEnabled(bool trafficEnabled);
   void SetIsolinesEnabled(bool isolinesEnabled);
   void SetHiddenFeatures(uint32_t mask);
+  void SetSelectedFeature(FeatureID const & featureId);
 
   void SetCustomFeatures(CustomFeatures && ids);
   std::vector<FeatureID> GetCustomFeaturesArray() const;
@@ -89,6 +90,7 @@ private:
   bool m_trafficEnabled;
   bool m_isolinesEnabled;
   uint32_t m_hiddenFeatures = 0;
+  FeatureID m_selectedFeature;
   bool m_modeChanged;
   int8_t m_mapLangIndex;
 

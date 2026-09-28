@@ -238,7 +238,6 @@ private:
   void UpdateDisplacementEnabled();
   void CheckIsometryMinScale(ScreenBase const & screen);
 
-  void DisablePerspective();
 
   // TODO all of these should call back to the platform to fire accessibility event / haptics / etc
   void OnTap(m2::PointD const & pt, bool isLong) override;
@@ -305,6 +304,8 @@ private:
   void PullToBoundArea(bool randomPlace, bool applyZoom);
 
   void ProcessSelection(ref_ptr<SelectObjectMessage> msg);
+  double GetSelectionRadius(ref_ptr<SelectObjectMessage> msg, ScreenBase const & modelView);
+  void HighlightFeatureCaption(FeatureID const & featureId);
 
   void OnPrepareRouteArrows(dp::DrapeID subrouteIndex, std::vector<ArrowBorders> && borders);
   void OnCacheRouteArrows(dp::DrapeID subrouteIndex, std::vector<ArrowBorders> const & borders);
@@ -433,6 +434,7 @@ private:
   OverlaysShowStatsCallback m_overlaysShowStatsCallback;
 
   bool m_forceUpdateScene;
+  FeatureID m_highlightedFeature;
   bool m_forceUpdateUserMarks;
 
   drape_ptr<PostprocessRenderer> m_postprocessRenderer;

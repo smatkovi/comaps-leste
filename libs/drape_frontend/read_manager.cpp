@@ -221,7 +221,7 @@ void ReadManager::PushTaskBackForTileKey(TileKey const & tileKey, ref_ptr<dp::Te
   auto context = make_unique_dp<EngineContext>(TileKey(tileKey, m_generationCounter, m_userMarksGenerationCounter),
                                                m_commutator, texMng, metalineMng, m_customFeaturesContext,
                                                m_have3dBuildings && m_allow3dBuildings, m_trafficEnabled,
-                                               m_isolinesEnabled, m_hiddenFeatures, m_mapLangIndex);
+                                               m_isolinesEnabled, m_hiddenFeatures, m_selectedFeature, m_mapLangIndex);
   std::shared_ptr<TileInfo> tileInfo = std::make_shared<TileInfo>(std::move(context));
   m_tileInfos.insert(tileInfo);
 
@@ -339,6 +339,15 @@ void ReadManager::SetHiddenFeatures(uint32_t mask)
   {
     m_modeChanged = true;
     m_hiddenFeatures = mask;
+  }
+}
+
+void ReadManager::SetSelectedFeature(FeatureID const & featureId)
+{
+  if (m_selectedFeature != featureId)
+  {
+    m_modeChanged = true;
+    m_selectedFeature = featureId;
   }
 }
 

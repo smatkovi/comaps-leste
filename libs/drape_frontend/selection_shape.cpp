@@ -37,15 +37,23 @@ SelectionShape::SelectionShape(ref_ptr<dp::GraphicsContext> context, ref_ptr<dp:
 {
   m_renderNode = SelectionShapeGenerator::GenerateSelectionMarker(context, mng);
   m_trackRenderNode = SelectionShapeGenerator::GenerateTrackSelectionMarker(context, mng);
-  m_radius = 15.0f * VisualParams::Instance().GetVisualScale();
+  SetRadius(15.0 * VisualParams::Instance().GetVisualScale());
+}
+
+void SelectionShape::SetRadius(double radius)
+{
+  m_radius = radius;
+  m_mapping = {};
   m_mapping.AddRangePoint(0.6, 1.3 * m_radius);
   m_mapping.AddRangePoint(0.85, 0.8 * m_radius);
   m_mapping.AddRangePoint(1.0, m_radius);
 }
 
-void SelectionShape::Show(ESelectedObject obj, m2::PointD const & position, double positionZ, bool isAnimate)
+void SelectionShape::Show(ESelectedObject obj, m2::PointD const & position, double positionZ, bool isAnimate,
+                          double radius)
 {
   m_animation.Hide();
+  SetRadius(radius);
   m_position = position;
   m_positionZ = positionZ;
   m_selectedObject = obj;

@@ -10,7 +10,7 @@ namespace df
 EngineContext::EngineContext(TileKey tileKey, ref_ptr<ThreadsCommutator> commutator, ref_ptr<dp::TextureManager> texMng,
                              ref_ptr<MetalineManager> metalineMng, CustomFeaturesContextWeakPtr customFeaturesContext,
                              bool is3dBuildingsEnabled, bool isTrafficEnabled, bool isolinesEnabled,
-                             uint32_t hiddenFeatures, int8_t mapLangIndex)
+                             uint32_t hiddenFeatures, FeatureID const & selectedFeature, int8_t mapLangIndex)
   : m_tileKey(tileKey)
   , m_commutator(commutator)
   , m_texMng(texMng)
@@ -20,6 +20,7 @@ EngineContext::EngineContext(TileKey tileKey, ref_ptr<ThreadsCommutator> commuta
   , m_trafficEnabled(isTrafficEnabled)
   , m_isolinesEnabled(isolinesEnabled)
   , m_hiddenFeatures(hiddenFeatures)
+  , m_selectedFeature(selectedFeature)
   , m_mapLangIndex(mapLangIndex)
 {}
 
