@@ -85,9 +85,9 @@ bool IsHiddenPoi(ref_ptr<EngineContext> context, feature::TypesHolder const & ty
 }
 
 // The selected feature's caption is drawn in white on dark maps, so it stands out.
-bool IsHighlightedCaption(EngineContext const & context, FeatureType & f)
+bool IsHighlightedCaption(ref_ptr<EngineContext> context, FeatureType & f)
 {
-  return context.GetSelectedFeature() == f.GetID() && MapStyleIsDark(GetStyleReader().GetCurrentStyle());
+  return context->GetSelectedFeature() == f.GetID() && MapStyleIsDark(GetStyleReader().GetCurrentStyle());
 }
 
 double GetBuildingHeightInMeters(FeatureType & f)
@@ -361,7 +361,7 @@ void RuleDrawer::ProcessAreaAndPointStyle(FeatureType & f, Stylist const & s, TI
   /// @todo Can we put this check in the beginning of this function?
   if (applyPointStyle && !IsDiscardCustomFeature(f.GetID()) && !IsHiddenChristmasFeature(f))
   {
-    apply.SetHighlightCaption(IsHighlightedCaption(*m_context, f));
+    apply.SetHighlightCaption(IsHighlightedCaption(m_context, f));
     apply.ProcessPointRules(s.m_symbolRule, s.m_captionRule, s.m_houseNumberRule, featureCenter,
                             m_context->GetTextureManager());
   }
@@ -444,7 +444,7 @@ void RuleDrawer::ProcessPointStyle(FeatureType & f, Stylist const & s, TInsertSh
     return;
 
   ApplyPointFeature apply(m_context->GetTileKey(), insertShape, f, s.GetCaptionDescription());
-  apply.SetHighlightCaption(IsHighlightedCaption(*m_context, f));
+  apply.SetHighlightCaption(IsHighlightedCaption(m_context, f));
   apply.ProcessPointRules(s.m_symbolRule, s.m_captionRule, s.m_houseNumberRule, f.GetCenter(),
                           m_context->GetTextureManager());
 }
