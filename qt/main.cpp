@@ -53,6 +53,9 @@ int main(int argc, char * argv[])
   InitializeFinalize mainGuard;
   UNUSED_VALUE(mainGuard);
 
+  // The default surface format must be set before the QApplication exists.
+  qt::common::SetDefaultSurfaceFormat(QString());
+
   QApplication app(argc, argv);
   app.setDesktopFileName("comaps");
   platform.SetupMeasurementSystem();
@@ -72,7 +75,6 @@ int main(int argc, char * argv[])
   {
     std::unique_ptr<qt::ScreenshotParams> screenshotParams;
 
-    qt::common::SetDefaultSurfaceFormat(QApplication::platformName());
 
     FrameworkParams frameworkParams;
     Framework framework(frameworkParams);

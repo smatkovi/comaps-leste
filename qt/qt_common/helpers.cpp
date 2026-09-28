@@ -56,40 +56,25 @@ location::GpsInfo MakeGpsInfo(m2::PointD const & point)
   return info;
 }
 
-void SetDefaultSurfaceFormat(QString const & platformName)
+void SetDefaultSurfaceFormat(QString const & /* platformName */)
 {
+  // OpenGL ES 3.0: no profile, RGBA8, 24-bit depth, 8-bit stencil.
   QSurfaceFormat fmt;
-  fmt.setAlphaBufferSize(8);
-  fmt.setBlueBufferSize(8);
-  fmt.setGreenBufferSize(8);
+  fmt.setProfile(QSurfaceFormat::NoProfile);
+  fmt.setRenderableType(QSurfaceFormat::OpenGLES);
+  fmt.setVersion(3, 0);
   fmt.setRedBufferSize(8);
-  fmt.setStencilBufferSize(0);
-  fmt.setSamples(0);
+  fmt.setGreenBufferSize(8);
+  fmt.setBlueBufferSize(8);
+  fmt.setAlphaBufferSize(8);
+  fmt.setDepthBufferSize(24);
+  fmt.setStencilBufferSize(8);
   fmt.setSwapBehavior(QSurfaceFormat::DoubleBuffer);
   fmt.setSwapInterval(1);
-  fmt.setDepthBufferSize(16);
-#if defined(OMIM_OS_LINUX)
-  fmt.setRenderableType(QSurfaceFormat::OpenGLES);
-  fmt.setProfile(QSurfaceFormat::CompatibilityProfile);
-#endif
-
-  // Set proper OGL version now (needed for "cocoa" or "xcb"), but have troubles with "wayland" devices.
-  // It will be resolved later in MapWidget::initializeGL when OGL context is available.
-  if (platformName != QString("wayland"))
-  {
-#if defined(OMIM_OS_LINUX)
-    LOG(LINFO, ("Set default OpenGL version to ES 3.0"));
-    fmt.setVersion(3, 0);
-#else
-    LOG(LINFO, ("Set default OGL version to 3.2"));
-    fmt.setProfile(QSurfaceFormat::CoreProfile);
-    fmt.setVersion(3, 2);
-#endif
-  }
-
 #ifdef ENABLE_OPENGL_DIAGNOSTICS
   fmt.setOption(QSurfaceFormat::DebugContext);
 #endif
+  LOG(LINFO, ("Set default surface format to OpenGL ES 3.0"));
   QSurfaceFormat::setDefaultFormat(fmt);
 }
 
