@@ -2,5 +2,8 @@
  * Keep here changes of the base map style files only
  * (see style.mapcss for exact processing order).
  *
- * None: the outdoor layer keeps the colours of the default dark style.
+ * The outdoor layer keeps the colours of the default dark style; only the
+ * variables the outdoor rules add are defined here.
  */
+
+@railway_dark: #434343;
