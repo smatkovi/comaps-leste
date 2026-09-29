@@ -131,7 +131,8 @@ std::string_view constexpr kMapModeKey = "MapMode";
 std::string_view constexpr kMapModeDrivingTrafficKey = "DrivingModeHasTraffic";
 std::string_view constexpr kMapModePublicTransportTransitLinesKey = "PublicTransportModeHasTransitLines";
 std::string_view constexpr kContourLinesKey = "HasContourLinesLayer";
-std::string_view constexpr kHiddenMapFeaturesKey = "HiddenMapFeatures";
+std::string_view constexpr kHiddenMapFeaturesKey = "HiddenMapFeatures2";
+std::string_view constexpr kOldHiddenMapFeaturesKey = "HiddenMapFeatures";
 std::string_view constexpr kRoadModeKey = "RoadMode";
 std::string_view constexpr kOutdoorKey = "HasOutdoorLayer";
 std::string_view constexpr kTrafficSimplifiedColorsKey = "TrafficSimplifiedColors";
@@ -2955,7 +2956,9 @@ bool Framework::HasContourLinesLayer()
 uint32_t Framework::GetHiddenMapFeatures() const
 {
   uint32_t mask = df::HiddenHouseNumbers | df::HiddenBuildings | df::HiddenEntrances;
-  settings::TryGet(kHiddenMapFeaturesKey, mask);
+  // A mask saved before the entrances filter existed hides them too, like a new one.
+  if (!settings::Get(kHiddenMapFeaturesKey, mask) && settings::Get(kOldHiddenMapFeaturesKey, mask))
+    mask |= df::HiddenEntrances;
   return mask;
 }
 
