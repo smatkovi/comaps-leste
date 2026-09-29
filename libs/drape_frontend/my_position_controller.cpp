@@ -1011,7 +1011,7 @@ void MyPositionController::ActivateRouting(int zoomLevel, bool enableAutoZoom, b
     if (m_preferredRoutingMode == location::Follow)
     {
       ChangeMode(location::Follow);
-      ChangeModelView(m_position, kDoNotChangeZoom);
+      ChangeModelView(m_position, zoomLevel);
     }
     else
     {

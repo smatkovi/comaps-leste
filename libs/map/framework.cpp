@@ -3728,10 +3728,10 @@ void Framework::OnRouteFollow(routing::RouterType type)
   bool const isPedestrianRoute = type == RouterType::Pedestrian;
   bool const allowRouteRotation = type == RouterType::Vehicle && !m_isCarScreenMode;
   bool const enableAutoZoom = isPedestrianRoute ? false : LoadAutoZoom();
-  int const scale = isPedestrianRoute ? scales::GetPedestrianNavigationScale() : scales::GetNavigationScale();
-  int scale3d = isPedestrianRoute ? scales::GetPedestrianNavigation3dScale() : scales::GetNavigation3dScale();
-  if (enableAutoZoom)
-    ++scale3d;
+  // Navigation starts close to the street, flat or in perspective; auto zoom takes over from there.
+  int constexpr kNavigationStartScale = 17;
+  int const scale = kNavigationStartScale;
+  int const scale3d = kNavigationStartScale;
 
   bool const isBicycleRoute = type == RouterType::Bicycle;
   if ((isPedestrianRoute || isBicycleRoute) && CurrentMapModeHasTraffic())
