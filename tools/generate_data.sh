@@ -60,6 +60,10 @@ BuildDrawingRules vehicle  dark _vehicle_dark
 echo "Applying the Maps line widths and place labels..."
 PYTHONPATH="$WORK" python3 "$SRC/tools/python/bake_map_rules.py" "$OUT"/drules_proto_*.bin
 
+echo "Brightening the dark map icons..."
+python3 "$SRC/tools/python/brighten_dark_symbols.py" "$OUT/styles/default/light/symbols" \
+  "$OUT/styles/default/dark/symbols"
+
 echo "Generating symbols..."
 export QT_QPA_PLATFORM=offscreen
 

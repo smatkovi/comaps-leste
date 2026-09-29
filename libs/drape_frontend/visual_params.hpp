@@ -28,6 +28,9 @@ public:
   static double constexpr kXxhdpiScale = 3.0;
   static double constexpr kXxxhdpiScale = 3.5;
 
+  /// Font scale 1.6 up to zoom 16 and 1.3 from zoom 17.
+  static double constexpr kDynamicFontScale = 0.0;
+
   static_assert(kMdpiScale < kHdpiScale && kHdpiScale < kXhdpiScale && kXhdpiScale < k6plusScale &&
                 k6plusScale < kXxhdpiScale && kXxhdpiScale < kXxxhdpiScale && kXxxhdpiScale <= kMaxVisualScale);
 
@@ -61,7 +64,10 @@ public:
   GlyphVisualParams const & GetGlyphVisualParams() const;
   uint32_t GetGlyphSdfScale() const;
   double GetFontScale() const;
+  /// kDynamicFontScale makes the labels of close zoom levels smaller, see GetFontZoomFactor.
   void SetFontScale(double fontScale);
+  /// Multiplies the font scale for the labels of a tile at zoomLevel.
+  double GetFontZoomFactor(int zoomLevel) const;
   /// Multiplies the visual scale when choosing the density of symbol textures, so icons get bigger.
   double GetSymbolScale() const;
   void SetSymbolScale(double symbolScale);
@@ -78,6 +84,7 @@ private:
   double m_visualScale = 0.0;
   double m_poiExtendScale = 0.1;  // Found empirically.
   std::atomic<double> m_fontScale = 1.0;
+  std::atomic<bool> m_dynamicFontScale = false;
   std::atomic<double> m_symbolScale = 1.0;
 
   DISALLOW_COPY_AND_MOVE(VisualParams);

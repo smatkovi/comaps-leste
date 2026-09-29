@@ -2652,7 +2652,7 @@ double Framework::LoadFontScaleFactor()
 {
   double scaleFactor;
   if (!settings::Get(kFontScaleFactor, scaleFactor))
-    scaleFactor = 1.6;
+    scaleFactor = df::VisualParams::kDynamicFontScale;
   return scaleFactor;
 }
 
@@ -2954,7 +2954,7 @@ bool Framework::HasContourLinesLayer()
 
 uint32_t Framework::GetHiddenMapFeatures() const
 {
-  uint32_t mask = df::HiddenHouseNumbers | df::HiddenBuildings;
+  uint32_t mask = df::HiddenHouseNumbers | df::HiddenBuildings | df::HiddenEntrances;
   settings::TryGet(kHiddenMapFeaturesKey, mask);
   return mask;
 }
@@ -3729,7 +3729,7 @@ void Framework::OnRouteFollow(routing::RouterType type)
   bool const allowRouteRotation = type == RouterType::Vehicle && !m_isCarScreenMode;
   bool const enableAutoZoom = isPedestrianRoute ? false : LoadAutoZoom();
   // Navigation starts close to the street, flat or in perspective; auto zoom takes over from there.
-  int constexpr kNavigationStartScale = 17;
+  int constexpr kNavigationStartScale = 18;
   int const scale = kNavigationStartScale;
   int const scale3d = kNavigationStartScale;
 

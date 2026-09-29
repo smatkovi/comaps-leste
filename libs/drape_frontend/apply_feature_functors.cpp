@@ -163,21 +163,25 @@ void ExtractLineParams(LineRuleProto const & lineRule, LineViewParams & params)
   }
 }
 
-void CaptionDefProtoToFontDecl(CaptionDefProto const * capRule, dp::FontDecl & params)
+void CaptionDefProtoToFontDecl(CaptionDefProto const * capRule, int zoomLevel, dp::FontDecl & params)
 {
-  double const vs = df::VisualParams::Instance().GetVisualScale();
+  auto const & vparams = df::VisualParams::Instance();
+  double const vs = vparams.GetVisualScale();
   params.m_color = ToDrapeColor(capRule->color());
-  params.m_size = static_cast<float>(std::max(kMinVisibleFontSize, capRule->height() * vs));
+  params.m_size = static_cast<float>(std::max(kMinVisibleFontSize, capRule->height() * vs) *
+                                     vparams.GetFontZoomFactor(zoomLevel));
 
   if (capRule->stroke_color() != 0)
     params.m_outlineColor = ToDrapeColor(capRule->stroke_color());
 }
 
-void ShieldRuleProtoToFontDecl(ShieldRuleProto const * shieldRule, dp::FontDecl & params)
+void ShieldRuleProtoToFontDecl(ShieldRuleProto const * shieldRule, int zoomLevel, dp::FontDecl & params)
 {
-  double const vs = df::VisualParams::Instance().GetVisualScale();
+  auto const & vparams = df::VisualParams::Instance();
+  double const vs = vparams.GetVisualScale();
   params.m_color = ToDrapeColor(shieldRule->text_color());
-  params.m_size = static_cast<float>(std::max(kMinVisibleFontSize, shieldRule->height() * vs));
+  params.m_size = static_cast<float>(std::max(kMinVisibleFontSize, shieldRule->height() * vs) *
+                                     vparams.GetFontZoomFactor(zoomLevel));
   if (shieldRule->text_stroke_color() != 0)
     params.m_outlineColor = ToDrapeColor(shieldRule->text_stroke_color());
 }
@@ -507,7 +511,7 @@ void ApplyPointFeature::ExtractCaptionParams(CaptionDefProto const * primaryProt
   auto & titleDecl = params.m_titleDecl;
 
   dp::FontDecl decl;
-  CaptionDefProtoToFontDecl(primaryProto, decl);
+  CaptionDefProtoToFontDecl(primaryProto, m_tileKey.m_zoomLevel, decl);
   titleDecl.m_primaryTextFont = decl;
   titleDecl.m_anchor = GetAnchor(primaryProto->offset_x(), primaryProto->offset_y());
   // TODO(pastk) : remove offsets processing as de-facto "text-offset: *" is used to define anchors only.
@@ -518,7 +522,7 @@ void ApplyPointFeature::ExtractCaptionParams(CaptionDefProto const * primaryProt
   {
     ASSERT(secondaryProto != nullptr, ());
     dp::FontDecl auxDecl;
-    CaptionDefProtoToFontDecl(secondaryProto, auxDecl);
+    CaptionDefProtoToFontDecl(secondaryProto, m_tileKey.m_zoomLevel, auxDecl);
     titleDecl.m_secondaryTextFont = auxDecl;
     // Secondary captions are optional always.
     titleDecl.m_secondaryOptional = true;
@@ -1064,7 +1068,7 @@ void ApplyLineFeatureAdditional::GetRoadShieldsViewParams(ref_ptr<dp::TextureMan
   m2::PointF const shieldTextOffset = GetShieldOffset(anchor, paddingWidth, paddingHeight);
 
   dp::FontDecl font;
-  ShieldRuleProtoToFontDecl(m_shieldRule, font);
+  ShieldRuleProtoToFontDecl(m_shieldRule, m_tileKey.m_zoomLevel, font);
   font.m_outlineColor = dp::Color::Transparent();
   font.m_color = GetRoadShieldTextColor(font.m_color, shield);
 
@@ -1213,7 +1217,7 @@ void ApplyLineFeatureAdditional::ProcessAdditionalLineRules(PathTextRuleProto co
     m_captionDepth = PriorityToDepth(pathtextRule->priority(), drule::pathtext, 0);
 
     dp::FontDecl fontDecl;
-    CaptionDefProtoToFontDecl(m_captionRule, fontDecl);
+    CaptionDefProtoToFontDecl(m_captionRule, m_tileKey.m_zoomLevel, fontDecl);
     PathTextViewParams params;
     FillCommonParams(params);
     params.m_depthLayer = DepthLayer::OverlayLayer;

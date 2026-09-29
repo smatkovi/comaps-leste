@@ -187,10 +187,10 @@ MapStyle GetRegularMapStyleVariant(MapStyle mapStyle)
   case MapStylePublicTransportOutdoorLight: return MapStylePublicTransportLight;
   case MapStylePublicTransportOutdoorDark: return MapStylePublicTransportDark;
   case MapStyleVehicleLight: return MapStyleVehicleLight;
-  case MapStyleVehicleDark: return MapStyleVehicleLight;
+  case MapStyleVehicleDark: return MapStyleVehicleDark;
 
   case MapStyleOutdoorsLight: return MapStyleDefaultLight;
-  case MapStyleOutdoorsDark: return MapStyleDefaultLight;
+  case MapStyleOutdoorsDark: return MapStyleDefaultDark;
 
   default: CHECK(false, ()); return MapStyleWalkingLight;
   }

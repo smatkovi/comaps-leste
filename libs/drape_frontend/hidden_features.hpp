@@ -19,6 +19,7 @@ enum HiddenFeatures : uint32_t
   HiddenBuildings = 1u << 5,
   HiddenFootways = 1u << 6,  // footways, paths, cycleways, tracks, steps
   HiddenRoads = 1u << 7,     // every road a car can use
+  HiddenEntrances = 1u << 8,
 };
 
 /// Whether a way (line) with these types is of a kind the hidden mask removes (roads or footpaths).

@@ -64,7 +64,13 @@ double VisualParams::GetFontScale() const
 void VisualParams::SetFontScale(double fontScale)
 {
   ASSERT_INITED;
-  m_fontScale = math::Clamp(fontScale, 0.5, 4.0);
+  m_dynamicFontScale = fontScale == kDynamicFontScale;
+  m_fontScale = m_dynamicFontScale ? 1.6 : math::Clamp(fontScale, 0.5, 4.0);
+}
+
+double VisualParams::GetFontZoomFactor(int zoomLevel) const
+{
+  return m_dynamicFontScale && zoomLevel >= 17 ? 1.3 / 1.6 : 1.0;
 }
 
 double VisualParams::GetSymbolScale() const

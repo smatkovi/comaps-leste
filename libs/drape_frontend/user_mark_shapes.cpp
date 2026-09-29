@@ -146,7 +146,8 @@ void GenerateColoredSymbolShapes(ref_ptr<dp::GraphicsContext> context, ref_ptr<d
     auto const textMetrics = textures->ShapeSingleTextLine(dp::kBaseFontSizePixels, titleDecl.m_primaryText, nullptr,
                                                            titleDecl.m_primaryTextLanguageIndex);
     auto const & vparams = VisualParams::Instance();
-    auto const fontScale = static_cast<float>(vparams.GetFontScale() * vparams.GetVisualScale());
+    auto const fontScale = static_cast<float>(vparams.GetFontScale() * vparams.GetFontZoomFactor(tileKey.m_zoomLevel) *
+                                              vparams.GetVisualScale());
     float const textRatio = titleDecl.m_primaryTextFont.m_size * fontScale / dp::kBaseFontSizePixels;
 
     sizeInc.x = textMetrics.m_lineWidthInPixels * textRatio;
@@ -256,7 +257,9 @@ void GenerateTextShapes(ref_ptr<dp::GraphicsContext> context, ref_ptr<dp::Textur
   if (renderInfo.m_minTitleZoom > tileKey.m_zoomLevel)
     return;
 
-  auto const vs = static_cast<float>(df::VisualParams::Instance().GetVisualScale());
+  auto const & vparams = df::VisualParams::Instance();
+  auto const vs = static_cast<float>(vparams.GetVisualScale());
+  auto const fontZoomFactor = static_cast<float>(vparams.GetFontZoomFactor(tileKey.m_zoomLevel));
 
   for (auto const & titleDecl : *renderInfo.m_titleDecl)
   {
@@ -271,8 +274,8 @@ void GenerateTextShapes(ref_ptr<dp::GraphicsContext> context, ref_ptr<dp::Textur
 
     // Here we use visual scale to adapt texts sizes and offsets
     // to different screen resolutions and DPI.
-    params.m_titleDecl.m_primaryTextFont.m_size *= vs;
-    params.m_titleDecl.m_secondaryTextFont.m_size *= vs;
+    params.m_titleDecl.m_primaryTextFont.m_size *= vs * fontZoomFactor;
+    params.m_titleDecl.m_secondaryTextFont.m_size *= vs * fontZoomFactor;
     params.m_titleDecl.m_primaryOffset *= vs;
     params.m_titleDecl.m_secondaryOffset *= vs;
 
