@@ -246,6 +246,7 @@ private:
   double m_lastLocationTimestamp;
 
   m2::RectD m_pixelRect;
+  double m_screenAngle = 0.0;
   m2::RectD m_visiblePixelRect;
   double m_positionRoutingOffsetY;
 

@@ -255,6 +255,7 @@ void MyPositionController::UpdatePosition()
 void MyPositionController::OnUpdateScreen(ScreenBase const & screen)
 {
   m_pixelRect = screen.PixelRectIn3d();
+  m_screenAngle = screen.GetAngle();
   if (m_visiblePixelRect.IsEmptyInterior())
     SetVisibleViewport(m_pixelRect);
 }
@@ -1011,7 +1012,9 @@ void MyPositionController::ActivateRouting(int zoomLevel, bool enableAutoZoom, b
     if (m_preferredRoutingMode == location::Follow)
     {
       ChangeMode(location::Follow);
-      ChangeModelView(m_position, zoomLevel);
+      // Like FollowAndRotate below, but keeping the map's rotation: this animation places the position
+      // every frame with the perspective that switches on meanwhile, so it ends on the position.
+      ChangeModelView(m_position, -m_screenAngle, m_visiblePixelRect.Center(), zoomLevel, {});
     }
     else
     {
