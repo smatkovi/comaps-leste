@@ -74,6 +74,7 @@
 #include "coding/point_coding.hpp"
 #include "coding/url.hpp"
 
+#include "geometry/parametrized_segment.hpp"
 #include "geometry/angles.hpp"
 #include "geometry/any_rect2d.hpp"
 #include "geometry/distance_on_sphere.hpp"
@@ -101,6 +102,7 @@
 #include "defines.hpp"
 
 #include <algorithm>
+#include <optional>
 
 using namespace location;
 using namespace routing;
@@ -2256,7 +2258,7 @@ FeatureID Framework::FindBuildingAtPoint(m2::PointD const & mercator) const
   return featureId;
 }
 
-FeatureID Framework::FindWayAtPoint(m2::PointD const & mercator) const
+FeatureID Framework::FindWayAtPoint(m2::PointD const & mercator, m2::PointD & onWay) const
 {
   // Within the touch radius the map uses for taps, in meters at the current zoom.
   double const radiusPx = df::VisualParams::Instance().GetTouchRectRadius();
@@ -2275,11 +2277,18 @@ FeatureID Framework::FindWayAtPoint(m2::PointD const & mercator) const
     feature::TypesHolder const types(ft);
     if (!ftypes::IsWayChecker::Instance()(types) || df::IsHiddenWay(hiddenFeatures, types))
       return;
-    double const distance = feature::GetMinDistanceMeters(ft, mercator);
-    if (distance < closest)
+    ft.ParseGeometry(FeatureType::BEST_GEOMETRY);
+    for (size_t i = 1; i < ft.GetPointsCount(); ++i)
     {
-      closest = distance;
-      way = ft.GetID();
+      m2::PointD const point =
+          m2::ParametrizedSegment<m2::PointD>(ft.GetPoint(i - 1), ft.GetPoint(i)).ClosestPointTo(mercator);
+      double const distance = mercator::DistanceOnEarth(point, mercator);
+      if (distance < closest)
+      {
+        closest = distance;
+        way = ft.GetID();
+        onWay = point;
+      }
     }
   }, scales::GetUpperScale());
   return way;
@@ -2359,8 +2368,9 @@ place_page::Info Framework::BuildPlacePageInfo(place_page::BuildInfo const & bui
     }
   }
 
-  // The selection stays where the finger was, not at the center of a building or a kilometers long street.
-  bool atTapPosition = false;
+  // Where the selection shows: the tap position inside a building, the nearest point of a street, not the
+  // center of a building or a kilometers long street.
+  std::optional<m2::PointD> selectionPoint;
   if (isFeatureMatchingEnabled && !selectedFeature.IsValid())
   {
     // A tap near a street means the street: a finger is much wider than the few meters the point search
@@ -2370,17 +2380,21 @@ place_page::Info Framework::BuildPlacePageInfo(place_page::BuildInfo const & bui
     if (buildingsShown)
     {
       selectedFeature = FindBuildingAtPoint(buildInfo.m_mercator);
-      atTapPosition = selectedFeature.IsValid();
+      if (selectedFeature.IsValid())
+        selectionPoint = buildInfo.m_mercator;
     }
     if (!selectedFeature.IsValid() && userTap)
     {
-      selectedFeature = FindWayAtPoint(buildInfo.m_mercator);
-      atTapPosition = selectedFeature.IsValid();
+      m2::PointD onWay;
+      selectedFeature = FindWayAtPoint(buildInfo.m_mercator, onWay);
+      if (selectedFeature.IsValid())
+        selectionPoint = onWay;
     }
     if (!selectedFeature.IsValid() && !buildingsShown)
     {
       selectedFeature = FindBuildingAtPoint(buildInfo.m_mercator);
-      atTapPosition = selectedFeature.IsValid();
+      if (selectedFeature.IsValid())
+        selectionPoint = buildInfo.m_mercator;
     }
   }
 
@@ -2389,8 +2403,8 @@ place_page::Info Framework::BuildPlacePageInfo(place_page::BuildInfo const & bui
     // Selection circle should match feature
     FillFeatureInfo(selectedFeature, outInfo);
 
-    if (atTapPosition)
-      outInfo.SetMercator(buildInfo.m_mercator);
+    if (selectionPoint)
+      outInfo.SetMercator(*selectionPoint);
     else if (buildInfo.IsUserMarkMatchingEnabled() && !outInfo.IsBookmark())
     {
       // Search for a user mark at POI position instead of tap position (an icon or text label was tapped).
