@@ -131,8 +131,13 @@ std::string_view constexpr kMapModeKey = "MapMode";
 std::string_view constexpr kMapModeDrivingTrafficKey = "DrivingModeHasTraffic";
 std::string_view constexpr kMapModePublicTransportTransitLinesKey = "PublicTransportModeHasTransitLines";
 std::string_view constexpr kContourLinesKey = "HasContourLinesLayer";
-std::string_view constexpr kHiddenMapFeaturesKey = "HiddenMapFeatures2";
-std::string_view constexpr kOldHiddenMapFeaturesKey = "HiddenMapFeatures";
+std::string_view constexpr kHiddenMapFeaturesKey = "HiddenMapFeatures3";
+// The keys the mask was saved under before: a mask saved under one of them has no bit for the
+// filters added since, so those are added to it, hidden like they are on a fresh install.
+std::string_view constexpr kHiddenMapFeaturesKey2 = "HiddenMapFeatures2";
+std::string_view constexpr kHiddenMapFeaturesKey1 = "HiddenMapFeatures";
+uint32_t constexpr kDefaultHiddenMapFeatures = df::HiddenHouseNumbers | df::HiddenBuildings | df::HiddenEntrances |
+                                               df::HiddenBarriers | df::HiddenWaste | df::HiddenElevators;
 std::string_view constexpr kRoadModeKey = "RoadMode";
 std::string_view constexpr kOutdoorKey = "HasOutdoorLayer";
 std::string_view constexpr kTrafficSimplifiedColorsKey = "TrafficSimplifiedColors";
@@ -1959,6 +1964,9 @@ FeatureID Framework::GetFeatureAtPoint(m2::PointD const & mercator, FeatureMatch
     {
     case feature::GeomType::Point:
     {
+      // Skip/ignore points the map doesn't draw (a hidden filter group, or never drawn at all).
+      if (df::IsHiddenPoi(hiddenFeatures, feature::TypesHolder(ft)))
+        return;
       currentDistance = mercator::DistanceOnEarth(mercator, feature::GetCenter(ft));
       if (currentDistance >= poiClosestDistanceToCenter)
         return;
@@ -2955,11 +2963,16 @@ bool Framework::HasContourLinesLayer()
 
 uint32_t Framework::GetHiddenMapFeatures() const
 {
-  uint32_t mask = df::HiddenHouseNumbers | df::HiddenBuildings | df::HiddenEntrances;
-  // A mask saved before the entrances filter existed hides them too, like a new one.
-  if (!settings::Get(kHiddenMapFeaturesKey, mask) && settings::Get(kOldHiddenMapFeaturesKey, mask))
-    mask |= df::HiddenEntrances;
-  return mask;
+  uint32_t mask = kDefaultHiddenMapFeatures;
+  if (settings::Get(kHiddenMapFeaturesKey, mask))
+    return mask;
+
+  uint32_t constexpr kAddedAfterKey2 = df::HiddenBarriers | df::HiddenWaste | df::HiddenElevators;
+  if (settings::Get(kHiddenMapFeaturesKey2, mask))
+    return mask | kAddedAfterKey2;
+  if (settings::Get(kHiddenMapFeaturesKey1, mask))
+    return mask | kAddedAfterKey2 | df::HiddenEntrances;
+  return kDefaultHiddenMapFeatures;
 }
 
 void Framework::SetHiddenMapFeatures(uint32_t mask)

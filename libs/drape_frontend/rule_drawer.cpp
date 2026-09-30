@@ -46,7 +46,6 @@
 
 #include <array>
 #include <functional>
-#include <initializer_list>
 #include <vector>
 
 namespace df
@@ -61,44 +60,6 @@ std::array<size_t, 10> constexpr kAverageSegmentsCount = {
     10000, 5000, 10000, 5000, 2500, 5000, 2000, 1000, 500, 500};
 
 double constexpr kMetersPerLevel = 3.0;
-
-class TopLevelChecker : public ftypes::BaseChecker
-{
-public:
-  explicit TopLevelChecker(std::initializer_list<char const *> roots) : BaseChecker(1 /* level */)
-  {
-    for (auto const * root : roots)
-      m_types.push_back(classif().GetTypeByPath({root}));
-  }
-};
-
-// Gyms, sports centres, escape rooms and other indoor venues; parks, pitches and other open spaces stay.
-class LeisureVenueChecker : public ftypes::BaseChecker
-{
-public:
-  LeisureVenueChecker() : BaseChecker(2 /* level */)
-  {
-    for (auto const * venue :
-         {"sports_centre", "fitness_centre", "sports_hall", "escape_game", "bowling_alley", "sauna", "dance",
-          "indoor_play", "adult_gaming_centre", "amusement_arcade", "hackerspace", "ice_rink", "miniature_golf"})
-      m_types.push_back(classif().GetTypeByPath({"leisure", venue}));
-  }
-};
-
-bool IsHiddenPoi(ref_ptr<EngineContext> context, feature::TypesHolder const & types)
-{
-  static TopLevelChecker const shops({"shop"});
-  static TopLevelChecker const tourism({"tourism"});
-  static TopLevelChecker const services({"amenity", "office", "craft", "healthcare", "sport"});
-  static LeisureVenueChecker const leisureVenues;
-  static TopLevelChecker const entrances({"entrance"});
-
-  bool const eat = ftypes::IsEatChecker::Instance()(types);
-  return (context->IsHidden(HiddenFood) && eat) || (context->IsHidden(HiddenShops) && shops(types)) ||
-         (context->IsHidden(HiddenTourism) && tourism(types)) ||
-         (context->IsHidden(HiddenServices) && !eat && (services(types) || leisureVenues(types))) ||
-         (context->IsHidden(HiddenEntrances) && entrances(types));
-}
 
 // The selected feature's caption is drawn in white on dark maps, so it stands out.
 bool IsHighlightedCaption(ref_ptr<EngineContext> context, FeatureType & f)
@@ -486,7 +447,7 @@ void RuleDrawer::operator()(FeatureType & f)
   Stylist s(f, m_zoomLevel, m_deviceLang);
   if (m_context->IsHidden(HiddenHouseNumbers))
     s.m_houseNumberRule = nullptr;
-  if (IsHiddenPoi(m_context, types))
+  if (IsHiddenPoi(m_context->GetHiddenFeatures(), types))
   {
     s.m_symbolRule = nullptr;
     s.m_captionRule = nullptr;
