@@ -216,6 +216,8 @@ protected:
   std::unique_ptr<BookmarkManager> m_bmManager;
 
   SearchMarks m_searchMarks;
+  // The only kind of result that gets a mark, 0 for every kind. See SetSearchMarksType.
+  uint32_t m_searchMarksType = 0;
 
   df::DrapeApi m_drapeApi;
 
@@ -611,6 +613,11 @@ public:
 
   void FillSearchResultsMarks(bool clear, search::Results const & results);
   void FillSearchResultsMarks(SearchResultsIterT beg, SearchResultsIterT end, bool clear);
+
+  // Limits the marks of a search shown on the map to results of one kind, so a search for a brand
+  // marks its shops and not also its vending machines and recycling containers. 0: every result.
+  void SetSearchMarksType(uint32_t type) { m_searchMarksType = type; }
+  bool IsSearchMarkType(search::Result const & result) const;
 
   /// Calculate distance and direction to POI for the given position.
   /// @param[in]  point             POI's position;

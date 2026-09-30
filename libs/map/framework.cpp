@@ -1478,6 +1478,13 @@ void Framework::FillSearchResultsMarks(bool clear, search::Results const & resul
   FillSearchResultsMarks(results.begin(), results.end(), clear);
 }
 
+bool Framework::IsSearchMarkType(search::Result const & result) const
+{
+  if (m_searchMarksType == 0)
+    return true;
+  return result.GetResultType() == search::Result::Type::Feature && result.IsSameType(m_searchMarksType);
+}
+
 void Framework::FillSearchResultsMarks(SearchResultsIterT beg, SearchResultsIterT end, bool clear)
 {
   auto editSession = GetBookmarkManager().GetEditSession();
@@ -1488,7 +1495,7 @@ void Framework::FillSearchResultsMarks(SearchResultsIterT beg, SearchResultsIter
   for (auto it = beg; it != end; ++it)
   {
     auto const & r = *it;
-    if (!r.HasPoint())
+    if (!r.HasPoint() || !IsSearchMarkType(r))
       continue;
 
     auto * mark = editSession.CreateUserMark<SearchMarkPoint>(r.GetFeatureCenter());
