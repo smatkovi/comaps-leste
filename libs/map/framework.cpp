@@ -714,12 +714,12 @@ void Framework::FillTrackInfo(Track const & track, m2::PointD const & trackPoint
   info.SetTitlesForTrack(track);
 }
 
-search::ReverseGeocoder::Address Framework::GetAddressAtPoint(m2::PointD const & pt) const
+search::ReverseGeocoder::Address Framework::GetAddressAtPoint(m2::PointD const & pt, double maxDistanceM) const
 {
   search::ReverseGeocoder const coder(m_featuresFetcher.GetDataSource());
   search::ReverseGeocoder::Address addr;
   /// @todo Call exact address manually here?
-  coder.GetNearbyAddress(pt, 0.5 /* maxDistanceM */, addr, true /* placeAsStreet */);
+  coder.GetNearbyAddress(pt, maxDistanceM, addr, true /* placeAsStreet */);
   return addr;
 }
 

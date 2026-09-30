@@ -765,7 +765,9 @@ private:
   void FillDescriptions(FeatureType & ft, place_page::Info & info) const;
 
 public:
-  search::ReverseGeocoder::Address GetAddressAtPoint(m2::PointD const & pt) const;
+  // The exact address at the point by default; a bigger radius takes the nearest addressed building
+  // within it, the way a search result's address is made (search::Ranker).
+  search::ReverseGeocoder::Address GetAddressAtPoint(m2::PointD const & pt, double maxDistanceM = 0.5) const;
 
   /// Get "best for the user" feature at given point even if it's invisible on the screen.
   /// Ignores coastlines and prefers buildings over other area features.
