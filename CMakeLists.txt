@@ -104,6 +104,10 @@ if (NOT jansson_FOUND)
 endif()
 find_package(pugixml CONFIG REQUIRED)
 find_package(utf8cpp CONFIG REQUIRED)
+if (NOT TARGET utf8cpp::utf8cpp)
+  # utf8cpp before 4.0 (Ubuntu 22.04) exports its target without the namespace.
+  add_library(utf8cpp::utf8cpp ALIAS utf8cpp)
+endif()
 find_package(glm CONFIG REQUIRED)
 if (NOT TARGET glm::glm-header-only)
   # Debian's glm only exports glm::glm, which is header-only there.
