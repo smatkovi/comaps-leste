@@ -24,6 +24,7 @@
 #include "search/editor_delegate.hpp"
 #include "search/result.hpp"
 #include "search/search_params.hpp"
+#include "search/utils.hpp"
 
 #include "storage/country.hpp"
 #include "storage/country_decl.hpp"
@@ -1483,6 +1484,59 @@ bool Framework::IsSearchMarkType(search::Result const & result) const
   if (m_searchMarksType == 0)
     return true;
   return result.GetResultType() == search::Result::Type::Feature && result.IsSameType(m_searchMarksType);
+}
+
+search::Results Framework::GetFeaturesOfTypeInRect(uint32_t type, m2::RectD const & rect, size_t maxCount) const
+{
+  std::vector<FeatureID> ids;
+  search::ForEachOfTypesInRect(m_featuresFetcher.GetDataSource(), {type}, rect,
+                               [&ids](FeatureID const & id) { ids.push_back(id); });
+  std::sort(ids.begin(), ids.end());
+
+  struct Place
+  {
+    FeatureID m_id;
+    m2::PointD m_center;
+    std::string m_name;
+    uint32_t m_bestType;
+    double m_distance;
+  };
+
+  std::vector<Place> places;
+  places.reserve(ids.size());
+
+  auto const pivot = rect.Center();
+  for (auto it = ids.begin(); it != ids.end();)
+  {
+    auto const mwmId = it->m_mwmId;
+    FeaturesLoaderGuard const guard(m_featuresFetcher.GetDataSource(), mwmId);
+    for (; it != ids.end() && it->m_mwmId == mwmId; ++it)
+    {
+      auto ft = guard.GetFeatureByIndex(it->m_index);
+      if (!ft)
+        continue;
+
+      feature::TypesHolder types(*ft);
+      types.SortBySpec();
+      auto const center = feature::GetCenter(*ft, FeatureType::WORST_GEOMETRY);
+      places.push_back({*it, center, ft->GetTranslatedName().m_primary.value_or(std::string()),
+                        types.GetBestType(), mercator::DistanceOnEarth(pivot, center)});
+    }
+  }
+
+  std::sort(places.begin(), places.end(),
+            [](Place const & lhs, Place const & rhs) { return lhs.m_distance < rhs.m_distance; });
+  if (places.size() > maxCount)
+    places.resize(maxCount);
+
+  search::Results results;
+  for (auto const & place : places)
+  {
+    search::Result result(place.m_center, place.m_name);
+    result.FromFeature(place.m_id, place.m_bestType, type, {});
+    results.AddResultNoChecks(std::move(result));
+  }
+  return results;
 }
 
 void Framework::FillSearchResultsMarks(SearchResultsIterT beg, SearchResultsIterT end, bool clear)

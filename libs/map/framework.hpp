@@ -619,6 +619,8 @@ public:
   void SetSearchMarksType(uint32_t type) { m_searchMarksType = type; }
   bool IsSearchMarkType(search::Result const & result) const;
 
+  search::Results GetFeaturesOfTypeInRect(uint32_t type, m2::RectD const & rect, size_t maxCount) const;
+
   /// Calculate distance and direction to POI for the given position.
   /// @param[in]  point             POI's position;
   /// @param[in]  lat, lon, north   Current position and heading from north;
