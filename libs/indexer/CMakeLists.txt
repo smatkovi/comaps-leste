@@ -158,6 +158,8 @@ omim_add_library(${PROJECT_NAME} ${SRC})
 
 # drules_struct.pb.{h,cc} are generated with the system protoc into gen/indexer/,
 # so "indexer/drules_struct.pb.h" resolves through the gen/ include directory.
+# protoc does not create its output directory, so make it here.
+file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/gen/indexer)
 protobuf_generate(
   TARGET ${PROJECT_NAME}
   LANGUAGE cpp
