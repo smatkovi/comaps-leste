@@ -48,6 +48,12 @@ GLuint QtOGLContextFactory::GetTextureHandle() const
   return m_drawContext->GetTextureHandle();
 }
 
+QSize QtOGLContextFactory::GetTextureSize() const
+{
+  ASSERT(m_drawContext != nullptr, ());
+  return m_drawContext->GetTextureSize();
+}
+
 dp::GraphicsContext * QtOGLContextFactory::GetDrawContext()
 {
   if (!m_drawContext)

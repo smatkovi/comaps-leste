@@ -29,6 +29,7 @@ public:
   bool AcquireFrame();
   GLuint GetTextureHandle() const;
   QRectF const & GetTexRect() const;
+  QSize GetTextureSize() const;
 
 private:
   QOffscreenSurface * m_surface = nullptr;

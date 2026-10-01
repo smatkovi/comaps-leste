@@ -102,6 +102,14 @@ QRectF const & QtRenderOGLContext::GetTexRect() const
   return m_acquiredFrameRect;
 }
 
+QSize QtRenderOGLContext::GetTextureSize() const
+{
+  if (!m_acquiredFrame)
+    return {};
+
+  return m_acquiredFrame->size();
+}
+
 GLuint QtRenderOGLContext::GetTextureHandle() const
 {
   if (!m_acquiredFrame)
