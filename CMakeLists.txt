@@ -95,12 +95,26 @@ endif()
 find_package(Freetype REQUIRED)
 find_package(harfbuzz CONFIG REQUIRED)
 find_package(expat CONFIG REQUIRED)
-find_package(jansson CONFIG REQUIRED)
+find_package(jansson CONFIG QUIET)
+if (NOT jansson_FOUND)
+  # Debian's libjansson-dev only ships a pkg-config file.
+  find_package(PkgConfig REQUIRED)
+  pkg_check_modules(JANSSON REQUIRED IMPORTED_TARGET GLOBAL jansson)
+  add_library(jansson::jansson ALIAS PkgConfig::JANSSON)
+endif()
 find_package(pugixml CONFIG REQUIRED)
 find_package(utf8cpp CONFIG REQUIRED)
 find_package(glm CONFIG REQUIRED)
+if (NOT TARGET glm::glm-header-only)
+  # Debian's glm only exports glm::glm, which is header-only there.
+  add_library(glm::glm-header-only ALIAS glm::glm)
+endif()
 find_package(ZLIB REQUIRED)
-find_package(Protobuf CONFIG REQUIRED)
+find_package(Protobuf CONFIG QUIET)
+if (NOT Protobuf_FOUND)
+  # Debian's libprotobuf-dev has no CMake package; CMake's FindProtobuf provides the same targets.
+  find_package(Protobuf REQUIRED)
+endif()
 
 # Boost is used header-only; take it from the system.
 find_package(Boost 1.85 CONFIG REQUIRED)
