@@ -12,5 +12,7 @@ enum HiddenFeatures : uint32_t
   HiddenServices = 1u << 3,
   HiddenHouseNumbers = 1u << 4,
   HiddenBuildings = 1u << 5,
+  HiddenFootways = 1u << 6,  // footways, paths, cycleways, tracks, steps
+  HiddenRoads = 1u << 7,     // every road a car can use
 };
 }  // namespace df

@@ -310,6 +310,15 @@ public:
 
   uint32_t GetHiddenMapFeatures() const;
   void SetHiddenMapFeatures(uint32_t mask);
+  /// Which ways the map draws: roads (RoadModeCar, the default), footpaths (RoadModeFoot) or both.
+  enum RoadMode
+  {
+    RoadModeCar = 0,
+    RoadModeFoot,
+    RoadModeCombined
+  };
+  RoadMode GetRoadMode() const;
+  void SetRoadMode(RoadMode mode);
 
   /// If the vehicle style is being used
   bool IsUsingVehicleStyle();
@@ -564,6 +573,7 @@ private:
   void InitCountryInfoGetter();
   void InitSearchAPI(size_t numThreads);
 
+  uint32_t DrapeHiddenFeatures() const;
   void SetMapStyle(MapStyle mapStyle, bool const forceRerendering = false);
   void MarkMapStyle(MapStyle mapStyle);
   MapStyle GetMapStyle() const;

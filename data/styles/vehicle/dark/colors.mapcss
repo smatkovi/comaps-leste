@@ -26,166 +26,166 @@
 
 /* 1.BASEMAP */
 
-@background: #050505;
+@background: #161412;
 
 /* 2.BOUNDARY */
 
-@border_country: #4C4C4C;
-@border_region: #5C5C5C;
+@border_country: #8D8D8D;
+@border_region: #A9A9A9;
 
 /* 3.NATURAL */
 /* 3.1 Main natural */
 
-@glacier: #111111;
-@water: #002222;
-@water_bad: #00261e;
-@river: #062026;
-@wetland: #001919;
-@beach: #28281A;
-@barerock: #302A2A;
-@desert: #191007;
+@glacier: #555555;
+@water: #4E8794;
+@water_bad: #53858A;
+@river: #4E8794;
+@wetland: #67907B;
+@beach: #584B30;
+@barerock: #49463E;
+@desert: #544D40;
 
 /*3.2 Vegetation*/
 
-@forest: #090F0A;
-@green0: #090F0A;
-@green1: #090F0A;
-@green2: #090F0A;
-@green3: #090F0A;
-@green4: #090F0A;
-@green5: #090F0A;
-@green6: #2F4000;
+@forest: #384315;
+@green0: #4B4D2C;
+@green1: #4B4D2C;
+@green2: #4B4D2C;
+@green3: #4B4D2C;
+@green4: #4B4D2C;
+@green5: #4B4D2C;
+@green6: #2C350E;
 
 /* 4.LANDUSE */
 /*4.1 Main landuse*/
 
 /*
-@university: #261F13;
-@hospital: #261916;
+@university: #322B23;
+@hospital: #332A28;
 */
-@general_area: #000000;
-@industrial: #0D0A0D;
-@construction_area: #0D0A0D;
-@sport: #070F0A;
-@military: #B71C1C;
-@prison: #7f7f7f;
-@parking: #191509;
-@parking_l: #1F190A;
-@farmland: #151500;
-@farmyard: #212106;
+@general_area: #2D2B29;
+@industrial: #2E2E2E;
+@construction_area: #2E2E2E;
+@sport: #535144;
+@military: #FC6262;
+@prison: #D3D3D3;
+@parking: #323434;
+@parking_l: #323434;
+@farmland: #4E4B36;
+@farmyard: #4F4937;
 
 /*4.2 Aerodrome*/
 
-@aerodrome0: #1B1821;
-@aerodrome1: #1B1821;
-@aerodrome2: #1B1821;
-@aerodrome3: #1B1821;
-@aerodrome4: #1B1821;
-@aerodrome5: #1B1821;
+@aerodrome0: #475C69;
+@aerodrome1: #455B68;
+@aerodrome2: #455B66;
+@aerodrome3: #445964;
+@aerodrome4: #405663;
+@aerodrome5: #3D525F;
 
 /* 4.3 Barriers */
 @fence: #444444;
-@hedge: #143C14;
-@cliff: #7D4F23;
+@hedge: #4D5A21;
+@cliff: #3D525F;
 
 /* 4.4 Buildings */
 
-@building0: #191919;
-@building1: #1D1D1D;
-@building_border0: #1C1C1C;
+@building0: #484845;
+@building1: #464644;
+@building_border0: #363631;
 
 /* 5.ROADS */
 /* 5.1 All roads */
 
-@trunk0: #4C2A19;
-@trunk1: #4C2A17;
-@primary0:  #5E351D;
-@primary1: #5E351D;
-@primary2: #5E351D;
-@secondary0: #3B3939;
-@residential: #363434;
-@unclassified: #333131;
-@pedestrian: #4D4744;
-@footway: #2B2827;
-@cycleway: #6E3D47;
-@construction: #332F2D;
-@track: #5F532D;
-@path: #944A12;
-@bridleway: #2B2827;
+@trunk0: #E48401;
+@trunk1: #E18A18;
+@primary0:  #D4B63D;
+@primary1: #DBBF32;
+@primary2: #D1BB47;
+@secondary0: #C29E4A;
+@residential: #7E7E7E;
+@unclassified: #7E7E7E;
+@pedestrian: #7E7C7C;
+@footway: #7E7C7C;
+@cycleway: #8483C6;
+@construction: #979BA6;
+@track: #AB903E;
+@path: #FF7A15;
+@bridleway: #484240;
 
 /* 5.2 Bridges */
 
-@bridge_background: #121212;
-@bridge_casing: #0D0D0D;
+@bridge_background: #4E4E27;
+@bridge_casing: #858585;
 @casing_road:  #0D0D0D;
 
 /* 5.3 Tunnels */
 
-@trunk_tunnel: #381F14;
+@trunk_tunnel: #663018;
 @trunk_tunnel_casing: #000000;
-@primary_tunnel: #4C2A1B;
+@primary_tunnel: #8B4120;
 @primary_tunnel_casing: #000000;
-@secondary_tunnel: #2B2827;
+@secondary_tunnel: #9A634B;
 @secondary_tunnel_casing:  #000000;
-@tertiary_tunnel: #2B2827;
+@tertiary_tunnel: #484240;
 @tertiary_tunnel_casing:  #000000;
-@unclassified_tunnel: #2B2827;
+@unclassified_tunnel: #484240;
 @unclassified_tunnel_casing: #000000;
 
 /* 5.5 Transport */
 
-@railway_light: #2C2630;
-@railway: #3A2F40;
-@railway_tourism: #3D3128;
-@railway_tunnel: #222222;
-@railway_dash: #050505;
+@railway_light: #5E4C69;
+@railway: #735680;
+@railway_tourism: #795A45;
+@railway_tunnel: #383838;
+@railway_dash: #080808;
 /* @aerialway: #4E4E3D; */
-@tram: #5C5C51;
+@tram: #999986;
 /* @ferry: #2A4541; */
 
 /* 6.LABELS COLORS */
 /* 6.1 Main labels */
 
-@label_dark: #888888;
-@label_medium: #8C8C8C;
-@label_light: #666666;
-@label_halo_medium: #111100;
-@label_halo_light: #060600;
+@label_dark: #E2E2E2;
+@label_medium: #C6C6C6;
+@label_light: #A9A9A9;
+@label_halo_medium: #1C1C00;
+@label_halo_light: #0A0A00;
 
 /* 6.2 Natural labels */
 
-@water_label: #004A59;
-@water_light_label: #004A59;
-@park_label: #2B4918;
-@halo_park_label: #111;
+@water_label: #00AAD1;
+@water_light_label: #00AAD1;
+@park_label: #79A667;
+@halo_park_label: #1C1C1C;
 
 /* 6.3 Place labels */
 
-@city_label: #999999;
-@country_label: #444444;
-@state_label: #444444;
-@district_label: #555555;
-@housenumber: #6C6C6C;
-@building_label: #737373;
-@poi_label: #666666;
-@subway_label: #555555;
-@shop_label: #6B425C;
-@industry_label: #574469;
-@food_label: #8C491C;
-@entertainment_label: #8C311B;
-@culture_label: #6E4426;
-@hotel_label: #614A43;
-@sport_label: #2B5C4B;
-@nature_label: #3C612E;
-@water_label: #0A6074;
-@neutral_label: #51585E;
-@healthcare_label: #983E44;
-@public_transport_label: #2F6499;
-@emergency_label: #247F52;
+@city_label: #FEFEFE;
+@country_label: #8D8D8D;
+@state_label: #8D8D8D;
+@district_label: #CBCBCB;
+@housenumber: #C1C1C1;
+@building_label: #C4C4C4;
+@poi_label: #E8E8E8;
+@subway_label: #FFFFFF;
+@shop_label: #B26D99;
+@industry_label: #9070AF;
+@food_label: #F07827;
+@entertainment_label: #F24C23;
+@culture_label: #C96E2D;
+@hotel_label: #A5796C;
+@sport_label: #3BA580;
+@nature_label: #5EAE3F;
+@water_label: #00AAD1;
+@neutral_label: #87929C;
+@healthcare_label: #DC878D;
+@public_transport_label: #68A6E4;
+@emergency_label: #30DF88;
 
 /* 6.4 Road labels */
 
-@shield_text: #303030;
+@shield_text: #FFFFFF;
 @shield_text_halo: #000000;
-@shield: #999999;
-@shield_outline: #303030;
+@shield: #000000;
+@shield_outline: #FFFFFF;

@@ -130,6 +130,7 @@ std::string_view constexpr kMapModeDrivingTrafficKey = "DrivingModeHasTraffic";
 std::string_view constexpr kMapModePublicTransportTransitLinesKey = "PublicTransportModeHasTransitLines";
 std::string_view constexpr kContourLinesKey = "HasContourLinesLayer";
 std::string_view constexpr kHiddenMapFeaturesKey = "HiddenMapFeatures";
+std::string_view constexpr kRoadModeKey = "RoadMode";
 std::string_view constexpr kOutdoorKey = "HasOutdoorLayer";
 std::string_view constexpr kTrafficSimplifiedColorsKey = "TrafficSimplifiedColors";
 std::string_view constexpr kFontScaleFactor = "FontScaleFactor";
@@ -1613,7 +1614,7 @@ void Framework::CreateDrapeEngine(ref_ptr<dp::GraphicsContextFactory> contextFac
   m_trafficManager.SetDrapeEngine(make_ref(m_drapeEngine));
   m_transitManager.SetDrapeEngine(make_ref(m_drapeEngine));
   m_isolinesManager.SetDrapeEngine(make_ref(m_drapeEngine));
-  m_drapeEngine->SetHiddenFeatures(GetHiddenMapFeatures());
+  m_drapeEngine->SetHiddenFeatures(DrapeHiddenFeatures());
   m_searchMarks.SetDrapeEngine(make_ref(m_drapeEngine));
 
   InvalidateUserMarks();
@@ -2900,7 +2901,33 @@ void Framework::SetHiddenMapFeatures(uint32_t mask)
 {
   settings::Set(kHiddenMapFeaturesKey, mask);
   if (m_drapeEngine != nullptr)
-    m_drapeEngine->SetHiddenFeatures(mask);
+    m_drapeEngine->SetHiddenFeatures(DrapeHiddenFeatures());
+}
+
+Framework::RoadMode Framework::GetRoadMode() const
+{
+  int mode = RoadModeCar;
+  settings::TryGet(kRoadModeKey, mode);
+  return mode == RoadModeFoot || mode == RoadModeCombined ? static_cast<RoadMode>(mode) : RoadModeCar;
+}
+
+void Framework::SetRoadMode(RoadMode mode)
+{
+  settings::Set(kRoadModeKey, static_cast<int>(mode));
+  if (m_drapeEngine != nullptr)
+    m_drapeEngine->SetHiddenFeatures(DrapeHiddenFeatures());
+}
+
+uint32_t Framework::DrapeHiddenFeatures() const
+{
+  uint32_t mask = GetHiddenMapFeatures();
+  switch (GetRoadMode())
+  {
+  case RoadModeCar: mask |= df::HiddenFootways; break;
+  case RoadModeFoot: mask |= df::HiddenRoads; break;
+  case RoadModeCombined: break;
+  }
+  return mask;
 }
 
 void Framework::SetContourLinesLayer(bool const hasContourLines)
