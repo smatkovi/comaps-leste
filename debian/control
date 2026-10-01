@@ -1,0 +1,46 @@
+Source: comaps
+Section: misc
+Priority: optional
+Maintainer: Sander <sander@sanderf.nl>
+Build-Depends: debhelper (>= 10),
+    cmake,
+    ninja-build,
+    pkg-config,
+    python3,
+    python3-protobuf,
+    qt6-base-dev,
+    qt6-svg-dev,
+    qt6-declarative-dev,
+    qt6-positioning-dev,
+    libgles-dev,
+    libvulkan-dev,
+    libfreetype-dev,
+    libharfbuzz-dev,
+    libexpat1-dev,
+    libjansson-dev,
+    libpugixml-dev,
+    libprotobuf-dev,
+    protobuf-compiler,
+    zlib1g-dev,
+    libutfcpp-dev,
+    libglm-dev,
+    libboost1.88-dev
+Homepage: https://codeberg.org/comaps/comaps
+
+Package: comaps
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends},
+    qml6-module-qtquick,
+    qml6-module-qtquick-controls,
+    qml6-module-qtquick-layouts,
+    qml6-module-qtquick-effects,
+    qml6-module-qtquick-templates,
+    qml6-module-qtquick-window,
+    qml6-module-qt-labs-platform,
+    libqt6positioning6-plugins,
+    fonts-material-design-icons-iconfont
+Recommends: geoclue-2.0
+Description: Offline maps with routing and search
+ CoMaps with a Qt Quick interface: offline OpenStreetMap maps, search,
+ routing and turn-by-turn navigation. The position comes from geoclue
+ through Qt Positioning.

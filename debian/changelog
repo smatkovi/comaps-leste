@@ -1,0 +1,6 @@
+comaps (2026.10.01) unstable; urgency=medium
+
+  * Initial Debian package: Qt Quick interface, position from geoclue via Qt
+    Positioning, built against the system libraries.
+
+ -- Sander <sander@sanderf.nl>  Thu, 01 Oct 2026 21:30:00 +0300
