@@ -2,9 +2,11 @@ pragma Singleton
 
 import QtQuick
 
-// Colours and base font sizes. Follows the desktop's light or dark colour scheme.
+// Colours and base font sizes. Dark unless the theme setting is light, or follows the desktop's
+// colour scheme with the theme set to system.
 QtObject {
-    readonly property bool dark: Qt.styleHints.colorScheme === Qt.Dark
+    readonly property bool dark: Settings.theme === "system" ? Qt.styleHints.colorScheme === Qt.Dark
+                                                             : Settings.theme !== "light"
     readonly property real scaleFactor: 1.0
 
     readonly property color accent: dark ? "#4f8ff7" : "#1a73e8"

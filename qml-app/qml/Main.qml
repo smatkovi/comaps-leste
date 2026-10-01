@@ -1,16 +1,14 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
-import Qt.labs.platform as Platform
 
-ApplicationWindow {
+// The content of the main window (MainWindow, a QMainWindow): the map and the pages on top of it.
+// The window menu is the native one; it calls the functions at the bottom.
+Item {
     id: window
 
     width: 420
     height: 820
-    visible: true
-    title: qsTr("Maps")
-    color: Metrics.background
 
     readonly property var currentPage: stack.currentItem
     readonly property var currentActions: currentPage && currentPage.pageActions ? currentPage.pageActions : []
@@ -19,6 +17,11 @@ ApplicationWindow {
         target: MapController
         property: "dark"
         value: Style.dark
+    }
+
+    Rectangle {
+        anchors.fill: parent
+        color: Metrics.background
     }
 
     MapView {
@@ -113,67 +116,6 @@ ApplicationWindow {
         }
     }
 
-    Platform.MenuBar {
-        // No title: the items sit at the top level of the menu.
-        Platform.Menu {
-
-            Platform.MenuItem {
-                text: qsTr("Map")
-                onTriggered: AppShell.popToMap()
-            }
-
-            Platform.MenuItem {
-                text: qsTr("Search")
-                onTriggered: AppShell.showMapSearch()
-            }
-
-            Platform.MenuSeparator {}
-
-            Platform.MenuItem {
-                text: qsTr("Bookmarks")
-                onTriggered: AppShell.openBookmarks()
-            }
-
-            Platform.MenuItem {
-                text: qsTr("Map downloads")
-                onTriggered: AppShell.openDownloader("")
-            }
-
-            Platform.MenuSeparator {}
-
-            Platform.MenuItem {
-                text: qsTr("Settings")
-                onTriggered: AppShell.openSettings()
-            }
-
-            Platform.MenuItem {
-                text: qsTr("About")
-                onTriggered: AppShell.openAbout()
-            }
-        }
-
-        Platform.Menu {
-            id: pageMenu
-            title: window.currentPage && window.currentPage.title ? window.currentPage.title : qsTr("Page")
-            visible: window.currentActions.length > 0
-
-            Instantiator {
-                model: window.currentActions
-                onObjectAdded: function (index, object) { pageMenu.insertItem(index, object) }
-                onObjectRemoved: function (index, object) { pageMenu.removeItem(object) }
-
-                delegate: Platform.MenuItem {
-                    required property var modelData
-                    text: modelData.text
-                    checkable: modelData.checkable === true
-                    checked: modelData.checked === true
-                    enabled: modelData.enabled !== false
-                    onTriggered: if (modelData.trigger) modelData.trigger()
-                }
-            }
-        }
-    }
-
     Shortcut {
         sequences: ["Back", "Esc"]
         onActivated: AppShell.back()
@@ -188,4 +130,7 @@ ApplicationWindow {
         AppShell.layersSheet = layersSheet
         AppShell.mapBackHandler = () => chrome.back()
     }
+
+    // Called from the window menu.
+    function showMapSearch() { AppShell.showMapSearch() }
 }

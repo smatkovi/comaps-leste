@@ -8,7 +8,7 @@ SettingsCard {
     implicitHeight: body.implicitHeight + 2 * Metrics.spacing
 
     TapHandler {
-        onTapped: AppShell.push("PlaceDetailsPage.qml")
+        onTapped: Windows.openPlaceDetails()
     }
 
     RowLayout {

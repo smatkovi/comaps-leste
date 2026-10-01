@@ -15,7 +15,7 @@ Item {
       : MapSearch.count > 0 ? qsTr("%1 (%2)").arg(MapSearch.label).arg(MapSearch.count)
       : qsTr("%1 · nothing found").arg(MapSearch.label)
     readonly property var pageActions: mode === "planning" ? [
-        { text: qsTr("Route options"), trigger: () => AppShell.push("RouteOptionsPage.qml") },
+        { text: qsTr("Route options"), trigger: () => Windows.openRouteOptions() },
         { text: qsTr("Close route"), trigger: () => Routing.cancel() }
     ] : []
 

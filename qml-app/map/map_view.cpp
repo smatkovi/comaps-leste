@@ -5,6 +5,7 @@
 
 #include "drape_frontend/visual_params.hpp"
 
+#include <QQuickRenderControl>
 #include <QQuickWindow>
 #include <QSGSimpleTextureNode>
 #include <QTouchEvent>
@@ -61,6 +62,8 @@ MapView::~MapView()
 {
   if (m_window)
     m_window->removeEventFilter(this);
+  if (m_renderWindow)
+    m_renderWindow->removeEventFilter(this);
   MapEngine::Instance().Detach(this);
 }
 
@@ -98,7 +101,13 @@ bool MapView::active() const
 
 bool MapView::IsShowing() const
 {
-  return isVisible() && m_window && m_window->isVisible() && m_window->isExposed() && !PixelSize().isEmpty();
+  if (!isVisible() || !m_window || PixelSize().isEmpty())
+    return false;
+  // Inside a QQuickWidget the scene's window is offscreen, neither visible nor exposed; the widget's
+  // window is what shows.
+  if (auto * renderWindow = QQuickRenderControl::renderWindowFor(m_window))
+    return renderWindow->isVisible() && renderWindow->isExposed();
+  return m_window->isVisible() && m_window->isExposed();
 }
 
 double MapView::Ratio() const
@@ -125,6 +134,9 @@ void MapView::ScheduleReevaluate()
   m_reevaluatePending = true;
   QMetaObject::invokeMethod(this, [this] {
     m_reevaluatePending = false;
+    WatchRenderWindow();
+    if (m_renderWindow || IsShowing())
+      disconnect(m_frameConnection);
     MapEngine::Instance().Attach(this);
   }, Qt::QueuedConnection);
 }
@@ -136,9 +148,27 @@ void MapView::WatchWindow(QQuickWindow * window)
   if (m_window)
     m_window->removeEventFilter(this);
   m_window = window;
+  disconnect(m_frameConnection);
   if (m_window)
+  {
     m_window->installEventFilter(this);
+    // A QQuickWidget marks its offscreen window visible without a Show event, and the window it is
+    // shown in only exists once the widget is: check again after frames until that is known.
+    m_frameConnection = connect(m_window, &QQuickWindow::afterFrameEnd, this, &MapView::ScheduleReevaluate);
+  }
   ScheduleReevaluate();
+}
+
+void MapView::WatchRenderWindow()
+{
+  QWindow * renderWindow = m_window ? QQuickRenderControl::renderWindowFor(m_window) : nullptr;
+  if (m_renderWindow == renderWindow)
+    return;
+  if (m_renderWindow)
+    m_renderWindow->removeEventFilter(this);
+  m_renderWindow = renderWindow;
+  if (m_renderWindow)
+    m_renderWindow->installEventFilter(this);
 }
 
 bool MapView::eventFilter(QObject * watched, QEvent * event)

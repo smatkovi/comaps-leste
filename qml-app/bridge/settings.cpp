@@ -17,6 +17,8 @@ double constexpr kDefaultPinchSpeed = 2.0;
 std::string_view constexpr kPinchSpeedKey = "PinchZoomSpeed";
 double constexpr kDefaultScrollSpeed = 2.0;
 std::string_view constexpr kScrollSpeedKey = "ScrollSpeed";
+std::string_view constexpr kThemeKey = "Theme";
+char const * const kDefaultTheme = "dark";
 }  // namespace
 
 Settings::Settings(Framework & framework) : m_framework(framework)
@@ -186,6 +188,21 @@ void Settings::setScrollSpeed(double speed)
 {
   settings::Set(kScrollSpeedKey, speed);
   MapView::SetScrollSpeed(speed);
+  emit changed();
+}
+
+QString Settings::theme() const
+{
+  std::string theme = kDefaultTheme;
+  settings::TryGet(kThemeKey, theme);
+  if (theme != "light" && theme != "system")
+    theme = kDefaultTheme;
+  return QString::fromStdString(theme);
+}
+
+void Settings::setTheme(QString const & theme)
+{
+  settings::Set(kThemeKey, theme.toStdString());
   emit changed();
 }
 

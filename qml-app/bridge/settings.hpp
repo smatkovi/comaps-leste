@@ -25,6 +25,8 @@ class Settings : public QObject
   Q_PROPERTY(bool autoZoom READ autoZoom WRITE setAutoZoom NOTIFY changed)
   Q_PROPERTY(double pinchSpeed READ pinchSpeed WRITE setPinchSpeed NOTIFY changed)
   Q_PROPERTY(double scrollSpeed READ scrollSpeed WRITE setScrollSpeed NOTIFY changed)
+  // "dark" (the default), "light", or "system" to follow the desktop's colour scheme.
+  Q_PROPERTY(QString theme READ theme WRITE setTheme NOTIFY changed)
   Q_PROPERTY(QString version READ version CONSTANT)
 
 public:
@@ -55,6 +57,8 @@ public:
   void setPinchSpeed(double speed);
   double scrollSpeed() const;
   void setScrollSpeed(double speed);
+  QString theme() const;
+  void setTheme(QString const & theme);
   QString version() const;
 
 signals:

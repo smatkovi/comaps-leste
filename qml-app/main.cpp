@@ -1,10 +1,12 @@
 #include "location.hpp"
+#include "main_window.hpp"
 #include "map_controller.hpp"
 #include "map_engine.hpp"
 #include "map_search.hpp"
 #include "place_page.hpp"
 #include "routing.hpp"
 #include "settings.hpp"
+#include "window_manager.hpp"
 
 #include "qt/qt_common/helpers.hpp"
 
@@ -14,9 +16,7 @@
 
 #include "base/logging.hpp"
 
-#include <QGuiApplication>
-#include <QQmlApplicationEngine>
-#include <QQmlError>
+#include <QApplication>
 #include <QQuickStyle>
 #include <QQuickWindow>
 #include <QtGlobal>
@@ -40,9 +40,9 @@ int main(int argc, char * argv[])
   QCoreApplication::setAttribute(Qt::AA_ShareOpenGLContexts);
   QQuickWindow::setGraphicsApi(QSGRendererInterface::OpenGL);
 
-  QGuiApplication app(argc, argv);
-  QGuiApplication::setApplicationName(QStringLiteral("comaps"));
-  QGuiApplication::setDesktopFileName(QStringLiteral("comaps"));
+  QApplication app(argc, argv);
+  QApplication::setApplicationName(QStringLiteral("comaps"));
+  QApplication::setDesktopFileName(QStringLiteral("comaps"));
   platform.SetupMeasurementSystem();
 
   if (qEnvironmentVariableIsEmpty("QT_QUICK_CONTROLS_STYLE"))
@@ -61,16 +61,13 @@ int main(int argc, char * argv[])
     Location location;
     location.Start();
 
-    QQmlApplicationEngine engine;
-    QObject::connect(&engine, &QQmlApplicationEngine::warnings, &app, [](QList<QQmlError> const & warnings) {
-      for (auto const & warning : warnings)
-        LOG(LWARNING, ("QML:", warning.toString().toStdString()));
-    });
-    engine.loadFromModule("Maps", "Main");
-    if (engine.rootObjects().isEmpty())
+    WindowManager windows(mapController, placePage, routingBridge);
+    MainWindow window(appSettings, mapController);
+    if (!window.IsLoaded())
       return EXIT_FAILURE;
+    window.show();
 
-    returnCode = QGuiApplication::exec();
+    returnCode = QApplication::exec();
   }
 
   LOG_SHORT(LINFO, ("Finished with code", returnCode));

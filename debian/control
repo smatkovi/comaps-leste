@@ -35,7 +35,6 @@ Depends: ${shlibs:Depends}, ${misc:Depends},
     qml6-module-qtquick-effects,
     qml6-module-qtquick-templates,
     qml6-module-qtquick-window,
-    qml6-module-qt-labs-platform,
     libqt6positioning6-plugins,
     fonts-material-design-icons-iconfont
 Recommends: geoclue-2.0

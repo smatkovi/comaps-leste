@@ -98,7 +98,7 @@ SettingsCard {
             ActionButton {
                 glyph: "tune"
                 label: qsTr("Options")
-                onClicked: AppShell.push("RouteOptionsPage.qml")
+                onClicked: Windows.openRouteOptions()
             }
 
             ActionButton {

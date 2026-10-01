@@ -56,17 +56,15 @@ QtObject {
             mapBackHandler()
     }
 
-    function openSearch(query) { push("SearchPage.qml", query ? { initialQuery: query } : {}) }
+    // The pages are windows (WindowManager); the map stays here.
+    function openSearch(query) { Windows.openSearch(query || "") }
     function showMapSearch() {
         popToMap()
         mapSearchShown = true
         mapSearchRequested()
     }
-    function openDownloader(parentId) { push("DownloaderPage.qml", { parentId: parentId || "" }) }
-    function openBookmarks() { push("BookmarksPage.qml") }
-    function openBookmarkList(categoryId) { push("BookmarksPage.qml", { categoryId: categoryId }) }
-    function openSettings() { push("SettingsPage.qml") }
-    function openAbout() { push("AboutPage.qml") }
+    function openDownloader(parentId) { Windows.openDownloader(parentId || "") }
+    function openBookmarks() { Windows.openBookmarks() }
 
     function toast(text) {
         if (toastHandler)

@@ -14,6 +14,7 @@
 #include <qopengl.h>
 
 class QQuickWindow;
+class QWindow;
 
 class MapView : public QQuickItem
 {
@@ -64,12 +65,17 @@ protected:
 
 private:
   void WatchWindow(QQuickWindow * window);
+  void WatchRenderWindow();
   void ScheduleReevaluate();
   void UpdateInputFlags();
   void SendMouse(QMouseEvent * event, int type);
   void SendTouches(df::TouchEvent::ETouchType type, m2::PointD const * locations, int count);
 
   QPointer<QQuickWindow> m_window;
+  // The window the scene is shown in when it is rendered offscreen (inside a QQuickWidget).
+  QPointer<QWindow> m_renderWindow;
+  // Re-checks after frames until the window the scene shows in is known (see WatchWindow).
+  QMetaObject::Connection m_frameConnection;
   QTimer m_frameTimer;
   QRectF m_visibleArea;
   bool m_primary = false;

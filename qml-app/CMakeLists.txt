@@ -1,6 +1,8 @@
 project(comaps)
 
-find_package(Qt6 REQUIRED COMPONENTS Qml Quick QuickControls2)
+find_package(Qt6 REQUIRED COMPONENTS Qml Quick QuickControls2 QuickWidgets Widgets)
+# Maemo widgets (value buttons with pickers in the settings); without them the settings use combo boxes.
+find_package(qt6maemo QUIET)
 
 qt_policy(SET QTP0001 NEW)
 
@@ -30,6 +32,24 @@ set(SRC
   map/map_engine.hpp
   map/map_view.cpp
   map/map_view.hpp
+  window/about_widget.cpp
+  window/about_widget.hpp
+  window/bookmarks_window.cpp
+  window/bookmarks_window.hpp
+  window/downloader_window.cpp
+  window/downloader_window.hpp
+  window/main_window.cpp
+  window/main_window.hpp
+  window/page_window.cpp
+  window/page_window.hpp
+  window/place_details_window.cpp
+  window/place_details_window.hpp
+  window/search_window.cpp
+  window/search_window.hpp
+  window/settings_widget.cpp
+  window/settings_widget.hpp
+  window/window_manager.cpp
+  window/window_manager.hpp
 )
 
 file(GLOB QML_FILES RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/qml/*.qml")
@@ -62,6 +82,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}
   ${CMAKE_CURRENT_SOURCE_DIR}/bridge
   ${CMAKE_CURRENT_SOURCE_DIR}/map
+  ${CMAKE_CURRENT_SOURCE_DIR}/window
 )
 target_include_directories(${PROJECT_NAME} SYSTEM PRIVATE ${3PARTY_INCLUDE_DIRS})
 
@@ -87,7 +108,17 @@ target_link_libraries(${PROJECT_NAME}
     Qt6::Qml
     Qt6::Quick
     Qt6::QuickControls2
+    Qt6::QuickWidgets
+    Qt6::Widgets
 )
+
+if (qt6maemo_FOUND)
+  message(STATUS "Maemo widgets: ON")
+  target_link_libraries(${PROJECT_NAME} PRIVATE qt6maemo::qt6maemo)
+  target_compile_definitions(${PROJECT_NAME} PRIVATE MAEMO=1)
+else()
+  message(STATUS "Maemo widgets: off (qt6-maemo not found)")
+endif()
 
 install(TARGETS ${PROJECT_NAME} RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 install(FILES ${OMIM_ROOT}/share/applications/comaps.desktop DESTINATION ${CMAKE_INSTALL_DATADIR}/applications)
