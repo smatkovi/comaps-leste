@@ -57,6 +57,9 @@ BuildDrawingRules public-transport_outdoor  dark _public-transport_outdoor_dark
 BuildDrawingRules vehicle  light _vehicle_light
 BuildDrawingRules vehicle  dark _vehicle_dark
 
+echo "Applying the Maps line widths and place labels..."
+PYTHONPATH="$WORK" python3 "$SRC/tools/python/bake_map_rules.py" "$OUT"/drules_proto_*.bin
+
 echo "Generating symbols..."
 export QT_QPA_PLATFORM=offscreen
 

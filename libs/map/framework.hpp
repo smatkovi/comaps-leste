@@ -472,6 +472,8 @@ private:
   Track::TrackSelectionInfo FindTrackInTapPosition(place_page::BuildInfo const & buildInfo) const;
   UserMark const * FindUserMarkInTapPosition(place_page::BuildInfo const & buildInfo) const;
   FeatureID FindBuildingAtPoint(m2::PointD const & mercator) const;
+  /// The nearest visible street or path within a finger's reach of the point, for taps.
+  FeatureID FindWayAtPoint(m2::PointD const & mercator) const;
 
   void UpdateMinBuildingsTapZoom();
 

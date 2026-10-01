@@ -2256,6 +2256,35 @@ FeatureID Framework::FindBuildingAtPoint(m2::PointD const & mercator) const
   return featureId;
 }
 
+FeatureID Framework::FindWayAtPoint(m2::PointD const & mercator) const
+{
+  // Within the touch radius the map uses for taps, in meters at the current zoom.
+  double const radiusPx = df::VisualParams::Instance().GetTouchRectRadius();
+  m2::PointD const pixel = m_currentModelView.GtoP(mercator);
+  double const radiusMeters =
+      mercator::DistanceOnEarth(mercator, m_currentModelView.PtoG(pixel + m2::PointD(radiusPx, 0.0)));
+  m2::RectD const rect = mercator::RectByCenterXYAndSizeInMeters(mercator, 2 * radiusMeters);
+  uint32_t const hiddenFeatures = DrapeHiddenFeatures();
+
+  FeatureID way;
+  double closest = radiusMeters;
+  m_featuresFetcher.ForEachFeature(rect, [&](FeatureType & ft)
+  {
+    if (ft.GetGeomType() != feature::GeomType::Line)
+      return;
+    feature::TypesHolder const types(ft);
+    if (!ftypes::IsWayChecker::Instance()(types) || df::IsHiddenWay(hiddenFeatures, types))
+      return;
+    double const distance = feature::GetMinDistanceMeters(ft, mercator);
+    if (distance < closest)
+    {
+      closest = distance;
+      way = ft.GetID();
+    }
+  }, scales::GetUpperScale());
+  return way;
+}
+
 void Framework::BuildTrackPlacePage(Track::TrackSelectionInfo const & trackSelectionInfo, place_page::Info & info)
 {
   info.SetSelectedObject(df::SelectionShape::OBJECT_TRACK);
@@ -2330,11 +2359,29 @@ place_page::Info Framework::BuildPlacePageInfo(place_page::BuildInfo const & bui
     }
   }
 
-  bool isBuildingSelected = false;
+  // The selection stays where the finger was, not at the center of a building or a kilometers long street.
+  bool atTapPosition = false;
   if (isFeatureMatchingEnabled && !selectedFeature.IsValid())
   {
-    selectedFeature = FindBuildingAtPoint(buildInfo.m_mercator);
-    isBuildingSelected = selectedFeature.IsValid();
+    // A tap near a street means the street: a finger is much wider than the few meters the point search
+    // allows. Visible buildings under the finger still come first; hidden ones only after the streets.
+    bool const userTap = buildInfo.m_source == place_page::BuildInfo::Source::User && m_drapeEngine != nullptr;
+    bool const buildingsShown = (DrapeHiddenFeatures() & df::HiddenBuildings) == 0;
+    if (buildingsShown)
+    {
+      selectedFeature = FindBuildingAtPoint(buildInfo.m_mercator);
+      atTapPosition = selectedFeature.IsValid();
+    }
+    if (!selectedFeature.IsValid() && userTap)
+    {
+      selectedFeature = FindWayAtPoint(buildInfo.m_mercator);
+      atTapPosition = selectedFeature.IsValid();
+    }
+    if (!selectedFeature.IsValid() && !buildingsShown)
+    {
+      selectedFeature = FindBuildingAtPoint(buildInfo.m_mercator);
+      atTapPosition = selectedFeature.IsValid();
+    }
   }
 
   if (selectedFeature.IsValid())
@@ -2342,8 +2389,8 @@ place_page::Info Framework::BuildPlacePageInfo(place_page::BuildInfo const & bui
     // Selection circle should match feature
     FillFeatureInfo(selectedFeature, outInfo);
 
-    if (isBuildingSelected)
-      outInfo.SetMercator(buildInfo.m_mercator);  // Move selection circle to the tap position inside a building.
+    if (atTapPosition)
+      outInfo.SetMercator(buildInfo.m_mercator);
     else if (buildInfo.IsUserMarkMatchingEnabled() && !outInfo.IsBookmark())
     {
       // Search for a user mark at POI position instead of tap position (an icon or text label was tapped).
