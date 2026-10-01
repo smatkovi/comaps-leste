@@ -4,18 +4,6 @@
 set(GENERATED_DATA_DIR ${CMAKE_BINARY_DIR}/runtime_data)
 set(GENERATED_DATA_STAMP ${CMAKE_BINARY_DIR}/data.stamp)
 
-add_custom_command(
-  OUTPUT ${GENERATED_DATA_STAMP}
-  COMMAND ${OMIM_ROOT}/tools/generate_data.sh ${OMIM_ROOT} ${GENERATED_DATA_DIR}
-          $<TARGET_FILE:skin_generator_tool> $<TARGET_FILE:protobuf::protoc>
-  COMMAND ${CMAKE_COMMAND} -E touch ${GENERATED_DATA_STAMP}
-  DEPENDS skin_generator_tool ${OMIM_ROOT}/tools/generate_data.sh
-  WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-  COMMENT "Generating runtime data"
-  USES_TERMINAL
-)
-add_custom_target(generate_data ALL DEPENDS ${GENERATED_DATA_STAMP})
-
 # Base world maps shipped with the app; the version must match data/countries.txt.
 set(WORLD_MAPS_URL "https://mapgen-fi-1.comaps.app/maps/2026.06.28/260830")
 set(WORLD_MAPS_DIR ${CMAKE_BINARY_DIR}/world_maps)
@@ -23,6 +11,20 @@ file(DOWNLOAD ${WORLD_MAPS_URL}/World.mwm ${WORLD_MAPS_DIR}/World.mwm
      EXPECTED_HASH SHA256=4dc68624af3102471e03bc05b02ad8b7a7ae3a7b6cd30ecb64228b14f9d4df03)
 file(DOWNLOAD ${WORLD_MAPS_URL}/WorldCoasts.mwm ${WORLD_MAPS_DIR}/WorldCoasts.mwm
      EXPECTED_HASH SHA256=a4d6f470b19137a624962ada2fe0d9c803e1f8925233abd3ce87a378abe2fe87)
+
+add_custom_command(
+  OUTPUT ${GENERATED_DATA_STAMP}
+  COMMAND ${OMIM_ROOT}/tools/generate_data.sh ${OMIM_ROOT} ${GENERATED_DATA_DIR}
+          $<TARGET_FILE:skin_generator_tool> $<TARGET_FILE:protobuf::protoc> ${Python3_EXECUTABLE}
+  # Next to the generated data too, so the app runs straight from the build tree.
+  COMMAND ${CMAKE_COMMAND} -E copy ${WORLD_MAPS_DIR}/World.mwm ${WORLD_MAPS_DIR}/WorldCoasts.mwm ${GENERATED_DATA_DIR}
+  COMMAND ${CMAKE_COMMAND} -E touch ${GENERATED_DATA_STAMP}
+  DEPENDS skin_generator_tool ${OMIM_ROOT}/tools/generate_data.sh
+  WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+  COMMENT "Generating runtime data"
+  USES_TERMINAL
+)
+add_custom_target(generate_data ALL DEPENDS ${GENERATED_DATA_STAMP})
 
 set(DATA_INSTALL_DIR ${CMAKE_INSTALL_DATADIR}/comaps/data)
 

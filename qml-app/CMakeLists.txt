@@ -47,6 +47,8 @@ set_source_files_properties(
   PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
 
 qt_add_executable(${PROJECT_NAME} ${SRC})
+# Run from the build tree, the app reads the generated data next to it (runtime_data).
+add_dependencies(${PROJECT_NAME} generate_data)
 set_target_properties(${PROJECT_NAME} PROPERTIES AUTOMOC ON)
 
 qt_add_qml_module(${PROJECT_NAME}

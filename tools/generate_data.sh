@@ -2,13 +2,15 @@
 # Generates the runtime data (strings, categories, drawing rules, symbol skins)
 # into a copy of data/ in the build tree.
 #
-# Usage: generate_data.sh <source root> <output data dir> <skin_generator_tool> <protoc>
+# Usage: generate_data.sh <source root> <output data dir> <skin_generator_tool> <protoc> [python]
 set -eu
 
 SRC="$1"
 OUT="$2"
 SKIN_GENERATOR="$3"
 PROTOC="$4"
+# The Python with the protobuf module (the build passes the one CMake found).
+PYTHON="${5:-python3}"
 WORK="$OUT.work"
 
 rm -rf "$OUT" "$WORK"
@@ -16,10 +18,10 @@ mkdir -p "$OUT" "$WORK"
 cp -a "$SRC/data/." "$OUT/"
 
 echo "Generating json strings..."
-python3 "$SRC/tools/python/generate_json_strings.py" "$OUT"
+"$PYTHON" "$SRC/tools/python/generate_json_strings.py" "$OUT"
 
 echo "Generating search categories..."
-python3 "$SRC/tools/python/categories/json_to_txt.py" "$OUT/categories-strings" "$OUT/categories.txt"
+"$PYTHON" "$SRC/tools/python/categories/json_to_txt.py" "$OUT/categories-strings" "$OUT/categories.txt"
 
 echo "Generating drawing rules..."
 "$PROTOC" --proto_path="$SRC/libs/indexer" --python_out="$WORK" "$SRC/libs/indexer/drules_struct.proto"
@@ -27,7 +29,7 @@ echo "Generating drawing rules..."
 BuildDrawingRules() {
   local styleType=$1 styleName=$2 suffix=$3
   echo "Building drawing rules for style $styleType/$styleName"
-  PYTHONPATH="$WORK" python3 "$SRC/tools/kothic/libkomwm.py" \
+  PYTHONPATH="$WORK" "$PYTHON" "$SRC/tools/kothic/libkomwm.py" \
     -s "$OUT/styles/$styleType/$styleName/style.mapcss" \
     -o "$OUT/drules_proto$suffix" \
     -p "$OUT/styles/$styleType/include/"
@@ -58,10 +60,10 @@ BuildDrawingRules vehicle  light _vehicle_light
 BuildDrawingRules vehicle  dark _vehicle_dark
 
 echo "Applying the Maps line widths and place labels..."
-PYTHONPATH="$WORK" python3 "$SRC/tools/python/bake_map_rules.py" "$OUT"/drules_proto_*.bin
+PYTHONPATH="$WORK" "$PYTHON" "$SRC/tools/python/bake_map_rules.py" "$OUT"/drules_proto_*.bin
 
 echo "Brightening the dark map icons..."
-python3 "$SRC/tools/python/brighten_dark_symbols.py" "$OUT/styles/default/light/symbols" \
+"$PYTHON" "$SRC/tools/python/brighten_dark_symbols.py" "$OUT/styles/default/light/symbols" \
   "$OUT/styles/default/dark/symbols"
 
 echo "Generating symbols..."

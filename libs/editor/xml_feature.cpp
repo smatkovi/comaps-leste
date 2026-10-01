@@ -99,6 +99,16 @@ void ValidateElement(pugi::xml_node const & nodeOrWay)
   if (!nodeOrWay.attribute(kTimestamp))
     MYTHROW(editor::NoTimestamp, ("Node has no timestamp attribute"));
 }
+
+bool SetValue(pugi::xml_attribute attribute, string_view value)
+{
+#if PUGIXML_VERSION < 1130
+  // pugixml before 1.13 (Ubuntu 22.04) has no set_value(char const *, size_t).
+  return attribute.set_value(string(value).c_str());
+#else
+  return attribute.set_value(value.data(), value.size());
+#endif
+}
 }  // namespace
 
 XMLFeature::XMLFeature(Type const type)
@@ -627,12 +637,12 @@ void XMLFeature::SetTagValue(string_view key, string_view value)
   if (!tag)
   {
     tag = GetRootNode().append_child("tag");
-    tag.append_attribute("k").set_value(key.data(), key.size());
-    tag.append_attribute("v").set_value(value.data(), value.size());
+    SetValue(tag.append_attribute("k"), key);
+    SetValue(tag.append_attribute("v"), value);
   }
   else
   {
-    tag.attribute("v").set_value(value.data(), value.size());
+    SetValue(tag.attribute("v"), value);
   }
 }
 

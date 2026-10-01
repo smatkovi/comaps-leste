@@ -102,6 +102,7 @@ Platform::Platform()
   else
   {  // Guess the existing resources directory.
     std::string const dirsToScan[] = {
+        JoinPath(*execDir, "runtime_data"),                   // data generated next to the binary in the build tree
         "./data",                                             // symlink in the current folder
         "../data",                                            // 'build' folder inside the repo
         JoinPath(*execDir, "..", "comaps", "data"),           // build-omim-{debug,release}

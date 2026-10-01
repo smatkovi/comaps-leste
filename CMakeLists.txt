@@ -108,6 +108,18 @@ if (NOT TARGET utf8cpp::utf8cpp)
   # utf8cpp before 4.0 (Ubuntu 22.04) exports its target without the namespace.
   add_library(utf8cpp::utf8cpp ALIAS utf8cpp)
 endif()
+# utf8cpp before 4.0 has no utf8::unchecked::next16; base/string_utils.hpp then provides it.
+include(CheckCXXSourceCompiles)
+get_target_property(UTF8CPP_INCLUDE_DIRS utf8cpp::utf8cpp INTERFACE_INCLUDE_DIRECTORIES)
+set(CMAKE_REQUIRED_INCLUDES ${UTF8CPP_INCLUDE_DIRS})
+check_cxx_source_compiles("
+  #include <utf8/unchecked.h>
+  int main() { char16_t const s[] = u\"a\"; char16_t const * it = s; return static_cast<int>(utf8::unchecked::next16(it)); }"
+  UTF8CPP_HAS_NEXT16)
+unset(CMAKE_REQUIRED_INCLUDES)
+if (NOT UTF8CPP_HAS_NEXT16)
+  add_compile_definitions(UTF8CPP_NO_NEXT16)
+endif()
 find_package(glm CONFIG REQUIRED)
 if (NOT TARGET glm::glm-header-only)
   # Debian's glm only exports glm::glm, which is header-only there.
@@ -121,7 +133,12 @@ if (NOT Protobuf_FOUND)
 endif()
 
 # Boost is used header-only; take it from the system.
-find_package(Boost 1.85 CONFIG REQUIRED)
+find_package(Boost CONFIG REQUIRED)
+if (Boost_VERSION VERSION_LESS 1.76)
+  # Boost.Regex is header-only from 1.76 on; older Boost (Ubuntu 22.04 has 1.74) needs its library.
+  find_package(Boost CONFIG REQUIRED COMPONENTS regex)
+  link_libraries(Boost::regex)
+endif()
 set(3PARTY_INCLUDE_DIRS ${Boost_INCLUDE_DIRS})
 
 # Include 3party dependencies.

@@ -162,7 +162,8 @@ FreetypeError constexpr g_FT_Errors[] =
       // FT_LOAD_RENDER with FT_RENDER_MODE_SDF uses bsdf driver that is around 3x times faster
       // than sdf driver, activated by FT_LOAD_DEFAULT + FT_RENDER_MODE_SDF
       FREETYPE_CHECK(FT_Load_Glyph(m_fontFace, glyphId, FT_LOAD_RENDER));
-      if (sdf)
+      // FreeType before 2.13 (Ubuntu 22.04 has 2.11) refuses an SDF render of an empty bitmap, e.g. a space.
+      if (sdf && m_fontFace->glyph->bitmap.rows > 0 && m_fontFace->glyph->bitmap.width > 0)
         FREETYPE_CHECK(FT_Render_Glyph(m_fontFace->glyph, FT_RENDER_MODE_SDF));
 
       FT_Bitmap const & bitmap = m_fontFace->glyph->bitmap;

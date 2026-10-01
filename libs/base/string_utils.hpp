@@ -19,6 +19,21 @@
 
 #include <utf8/unchecked.h>
 
+#if defined(UTF8CPP_NO_NEXT16)
+// utf8cpp before 4.0 (Ubuntu 22.04) has no next16: the code point a UTF-16 iterator is at, advancing past it.
+namespace utf8::unchecked
+{
+template <typename word_iterator>
+uint32_t next16(word_iterator & it)
+{
+  uint32_t cp = utf8::internal::mask16(*it++);
+  if (utf8::internal::is_lead_surrogate(cp))
+    return (cp << 10) + utf8::internal::mask16(*it++) + utf8::internal::SURROGATE_OFFSET;
+  return cp;
+}
+}  // namespace utf8::unchecked
+#endif
+
 /// All methods work with strings in utf-8 format
 namespace strings
 {
