@@ -71,6 +71,7 @@ set(SRC
   drape_measurer.hpp
   engine_context.cpp
   engine_context.hpp
+  hidden_features.cpp
   hidden_features.hpp
   frame_values.hpp
   frontend_renderer.cpp

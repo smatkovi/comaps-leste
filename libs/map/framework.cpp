@@ -1939,6 +1939,7 @@ FeatureID Framework::GetFeatureAtPoint(m2::PointD const & mercator, FeatureMatch
   auto lineClosestDistance = numeric_limits<double>::max();
   auto areaClosestDistanceToCenter = numeric_limits<double>::max();
   auto currentDistance = numeric_limits<double>::max();
+  uint32_t const hiddenFeatures = DrapeHiddenFeatures();
 
   indexer::ForEachFeatureAtPoint(m_featuresFetcher.GetDataSource(), [&](FeatureType & ft)
   {
@@ -1964,8 +1965,8 @@ FeatureID Framework::GetFeatureAtPoint(m2::PointD const & mercator, FeatureMatch
     }
     case feature::GeomType::Line:
     {
-      // Skip/ignore isolines.
-      if (ftypes::IsIsolineChecker::Instance()(ft))
+      // Skip/ignore isolines, and ways the map doesn't draw (footpaths or roads, see SetRoadMode).
+      if (ftypes::IsIsolineChecker::Instance()(ft) || df::IsHiddenWay(hiddenFeatures, feature::TypesHolder(ft)))
         return;
       currentDistance = feature::GetMinDistanceMeters(ft, mercator);
       if (currentDistance >= lineClosestDistance)

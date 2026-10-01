@@ -36,6 +36,7 @@ public:
   bool IsTrafficEnabled() const { return m_trafficEnabled; }
   bool IsolinesEnabled() const { return m_isolinesEnabled; }
   bool IsHidden(HiddenFeatures group) const { return (m_hiddenFeatures & group) != 0; }
+  uint32_t GetHiddenFeatures() const { return m_hiddenFeatures; }
   FeatureID const & GetSelectedFeature() const { return m_selectedFeature; }
   int8_t GetMapLangIndex() const { return m_mapLangIndex; }
   CustomFeaturesContextWeakPtr GetCustomFeaturesContext() const { return m_customFeaturesContext; }

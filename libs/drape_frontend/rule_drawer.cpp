@@ -90,26 +90,6 @@ bool IsHighlightedCaption(ref_ptr<EngineContext> context, FeatureType & f)
   return context->GetSelectedFeature() == f.GetID() && MapStyleIsDark(GetStyleReader().GetCurrentStyle());
 }
 
-class HighwayChecker : public ftypes::BaseChecker
-{
-public:
-  explicit HighwayChecker(std::initializer_list<char const *> kinds) : BaseChecker(2 /* level */)
-  {
-    for (auto const * kind : kinds)
-      m_types.push_back(classif().GetTypeByPath({"highway", kind}));
-  }
-};
-
-bool IsHiddenWay(ref_ptr<EngineContext> context, feature::TypesHolder const & types)
-{
-  static HighwayChecker const footways({"footway", "path", "pedestrian", "cycleway", "bridleway", "steps", "ladder",
-                                        "track"});
-  static HighwayChecker const roads({"motorway", "motorway_link", "trunk", "trunk_link", "primary", "primary_link",
-                                     "secondary", "secondary_link", "tertiary", "tertiary_link", "unclassified",
-                                     "residential", "living_street", "service", "road", "busway", "construction"});
-  return (context->IsHidden(HiddenFootways) && footways(types)) || (context->IsHidden(HiddenRoads) && roads(types));
-}
-
 double GetBuildingHeightInMeters(FeatureType & f)
 {
   double constexpr kDefaultHeightInMeters = 3.0;
@@ -484,7 +464,7 @@ void RuleDrawer::operator()(FeatureType & f)
     return;
 
   // Ways of the hidden kind (roads or footpaths); areas such as pedestrian squares stay.
-  if (f.GetGeomType() == feature::GeomType::Line && IsHiddenWay(m_context, types))
+  if (f.GetGeomType() == feature::GeomType::Line && IsHiddenWay(m_context->GetHiddenFeatures(), types))
     return;
 
   Stylist s(f, m_zoomLevel, m_deviceLang);
