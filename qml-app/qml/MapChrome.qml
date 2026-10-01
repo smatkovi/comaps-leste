@@ -5,6 +5,7 @@ Item {
     id: chrome
 
     readonly property string mode: Routing.state
+    readonly property bool landscape: width > height
     readonly property real obstructedTop: topArea.y + topArea.height
     readonly property real obstructedBottom: bottomArea.y
 
@@ -28,43 +29,39 @@ Item {
         anchors.rightMargin: Metrics.pageMargin
         height: chrome.mode === "navigating" ? turnCard.height
               : chrome.mode === "planning" ? routeCard.height
-              : searchRow.height
+              : searchRow.visible ? searchRow.height : 0
 
         RowLayout {
             id: searchRow
             anchors.top: parent.top
             anchors.left: parent.left
             anchors.right: parent.right
-            visible: chrome.mode === "idle"
+            visible: chrome.mode === "idle" && (AppShell.mapSearchShown || MapSearch.active)
             spacing: Metrics.spacingSmall
 
-            Item {
+            // Typing hands over to the search page; while a search is shown on the map, the bar says
+            // what is shown. Its close button leaves search mode.
+            SearchBox {
+                id: search
                 Layout.fillWidth: true
-                Layout.preferredHeight: search.implicitHeight
-
-                // A button that opens the search page, and, while a search is shown on the map, what
-                // is shown; the field itself is disabled so the tap below it always opens the page.
-                SearchBox {
-                    id: search
-                    anchors.fill: parent
-                    enabled: false
-                    placeholderText: MapSearch.active ? chrome.onMapSearchLabel : qsTr("Search Maps")
-                    border.width: 1
-                    border.color: MapSearch.active ? Style.accent : Style.line
+                closable: true
+                placeholderText: MapSearch.active ? chrome.onMapSearchLabel : qsTr("Search Maps")
+                border.width: 1
+                border.color: MapSearch.active ? Style.accent : Style.line
+                onEdited: function (value) {
+                    if (value === "")
+                        return
+                    AppShell.mapSearchShown = false
+                    AppShell.openSearch(value)
+                    Qt.callLater(() => search.text = "")
                 }
-
-                TapHandler {
-                    onTapped: AppShell.openSearch()
-                }
+                onCloseRequested: chrome.closeSearch()
             }
+        }
 
-            MapButton {
-                diameter: Metrics.buttonHeight
-                visible: MapSearch.active
-                lit: true
-                glyph: "close"
-                onTapped: MapSearch.clear()
-            }
+        Connections {
+            target: AppShell
+            function onMapSearchRequested() { Qt.callLater(search.focusInput) }
         }
 
         RouteCard {
@@ -82,12 +79,15 @@ Item {
         }
     }
 
-    Column {
+    // Portrait: a column on the right below the top bar. Landscape has no height for that, so the
+    // buttons form a row on the position button's line, to its left.
+    Grid {
         id: mapButtons
-        anchors.right: parent.right
-        anchors.rightMargin: Metrics.pageMargin
-        y: Math.max(topArea.y + topArea.height + Metrics.spacingLarge, (chrome.height - height) / 2)
-        visible: y + height + Metrics.spacingLarge < positionButton.y
+        columns: chrome.landscape ? children.length : 1
+        x: chrome.landscape ? positionButton.x - width - Metrics.spacing : chrome.width - width - Metrics.pageMargin
+        y: chrome.landscape ? positionButton.y + (positionButton.height - height) / 2
+                            : Math.max(topArea.y + topArea.height + Metrics.spacingLarge, (chrome.height - height) / 2)
+        visible: chrome.landscape ? x >= Metrics.pageMargin : y + height + Metrics.spacingLarge < positionButton.y
         spacing: Metrics.spacing
 
         MapButton {
@@ -115,8 +115,8 @@ Item {
         }
 
         Item {
-            width: 1
-            height: Metrics.spacingSmall
+            width: chrome.landscape ? Metrics.spacingSmall : 1
+            height: chrome.landscape ? 1 : Metrics.spacingSmall
         }
 
         MapButton {
@@ -189,6 +189,13 @@ Item {
         }
     }
 
+    function closeSearch() {
+        search.text = ""
+        AppShell.mapSearchShown = false
+        if (MapSearch.active)
+            MapSearch.clear()
+    }
+
     function back() {
         if (Routing.pickTarget !== "" && !PlacePage.open) {
             Routing.pickTarget = ""
@@ -198,8 +205,8 @@ Item {
             PlacePage.close()
             return
         }
-        if (mode === "idle" && MapSearch.active) {
-            MapSearch.clear()
+        if (mode === "idle" && (AppShell.mapSearchShown || MapSearch.active)) {
+            closeSearch()
             return
         }
         if (mode === "planning") {

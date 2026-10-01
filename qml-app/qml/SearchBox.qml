@@ -6,9 +6,12 @@ Rectangle {
 
     property alias text: input.text
     property alias placeholderText: placeholder.text
+    // Show a close button on the right at all times; it emits closeRequested instead of clearing the text.
+    property bool closable: false
 
     signal edited(string value)
     signal accepted()
+    signal closeRequested()
 
     function focusInput() {
         input.forceActiveFocus()
@@ -66,11 +69,15 @@ Rectangle {
         anchors.rightMargin: Metrics.spacingTight
         anchors.verticalCenter: parent.verticalCenter
         implicitWidth: root.height - 2 * Metrics.spacingTight
-        visible: root.enabled && input.text.length > 0
+        visible: root.enabled && (root.closable || input.text.length > 0)
         iconName: "close"
         iconSize: Metrics.fontLarge
         color: Style.textDim
         onClicked: {
+            if (root.closable) {
+                root.closeRequested()
+                return
+            }
             input.text = ""
             input.forceActiveFocus()
         }

@@ -137,7 +137,8 @@ std::string_view constexpr kHiddenMapFeaturesKey = "HiddenMapFeatures3";
 // filters added since, so those are added to it, hidden like they are on a fresh install.
 std::string_view constexpr kHiddenMapFeaturesKey2 = "HiddenMapFeatures2";
 std::string_view constexpr kHiddenMapFeaturesKey1 = "HiddenMapFeatures";
-uint32_t constexpr kDefaultHiddenMapFeatures = df::HiddenHouseNumbers | df::HiddenBuildings | df::HiddenEntrances |
+uint32_t constexpr kDefaultHiddenMapFeatures = df::HiddenFood | df::HiddenShops | df::HiddenTourism | df::HiddenServices |
+                                               df::HiddenHouseNumbers | df::HiddenBuildings | df::HiddenEntrances |
                                                df::HiddenBarriers | df::HiddenWaste | df::HiddenElevators;
 std::string_view constexpr kRoadModeKey = "RoadMode";
 std::string_view constexpr kOutdoorKey = "HasOutdoorLayer";

@@ -6,6 +6,7 @@ Item {
     id: page
 
     property string title: qsTr("Search")
+    property string initialQuery: ""
     readonly property var pageActions: results.count > 0 ? [
         { text: qsTr("Show results on map"), trigger: page.showAll }
     ] : []
@@ -167,6 +168,7 @@ Item {
     }
 
     StackView.onActivated: field.focusInput()
+    Component.onCompleted: if (initialQuery !== "") field.text = initialQuery
 
     function activate(index) {
         const suggestion = results.activate(index)

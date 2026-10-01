@@ -124,7 +124,7 @@ ApplicationWindow {
 
             Platform.MenuItem {
                 text: qsTr("Search")
-                onTriggered: AppShell.openSearch()
+                onTriggered: AppShell.showMapSearch()
             }
 
             Platform.MenuSeparator {}

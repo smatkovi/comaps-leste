@@ -15,6 +15,11 @@ QtObject {
     property var mapBackHandler: null
 
     readonly property bool onMap: stack === null || stack.depth <= 1
+    // The search bar on the map is shown (search mode).
+    property bool mapSearchShown: false
+
+    // The search bar on the map should take the focus.
+    signal mapSearchRequested()
 
     property var _sheetHandlers: []
     property var _confirmHandler: null
@@ -51,7 +56,12 @@ QtObject {
             mapBackHandler()
     }
 
-    function openSearch() { push("SearchPage.qml") }
+    function openSearch(query) { push("SearchPage.qml", query ? { initialQuery: query } : {}) }
+    function showMapSearch() {
+        popToMap()
+        mapSearchShown = true
+        mapSearchRequested()
+    }
     function openDownloader(parentId) { push("DownloaderPage.qml", { parentId: parentId || "" }) }
     function openBookmarks() { push("BookmarksPage.qml") }
     function openBookmarkList(categoryId) { push("BookmarksPage.qml", { categoryId: categoryId }) }
