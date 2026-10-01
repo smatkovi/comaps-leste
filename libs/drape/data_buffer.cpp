@@ -46,10 +46,12 @@ void DataBuffer::MoveToGPU(ref_ptr<GraphicsContext> context, GPUBuffer::Target t
   }
   else if (apiVersion == dp::ApiVersion::Vulkan)
   {
+#if defined(OMIM_VULKAN_AVAILABLE)
     if (currentSize != 0)
       m_impl = CreateImplForVulkan(context, m_impl->Data(), m_impl->GetElementSize(), currentSize, batcherHash);
     else
       m_impl = CreateImplForVulkan(context, nullptr, m_impl->GetElementSize(), m_impl->GetAvailableSize(), batcherHash);
+#endif
   }
   else
   {

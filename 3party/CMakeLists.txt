@@ -12,4 +12,6 @@ add_subdirectory(stb_image)
 add_subdirectory(succinct)
 add_subdirectory(monocypher)
 
-add_subdirectory(vulkan_wrapper)
+if (VULKAN)
+  add_subdirectory(vulkan_wrapper)
+endif()

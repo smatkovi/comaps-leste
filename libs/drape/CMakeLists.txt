@@ -115,32 +115,37 @@ set(DRAPE_TESTABLE_SRC
   viewport.cpp
   viewport.hpp
   visual_scale.hpp
-  vulkan/vulkan_base_context.cpp
-  vulkan/vulkan_base_context.hpp
-  vulkan/vulkan_context_factory.cpp
-  vulkan/vulkan_context_factory.hpp
-  vulkan/vulkan_gpu_buffer_impl.cpp
-  vulkan/vulkan_gpu_buffer_impl.hpp
-  vulkan/vulkan_gpu_program.hpp
-  vulkan/vulkan_layers.cpp
-  vulkan/vulkan_layers.hpp
-  vulkan/vulkan_memory_manager.cpp
-  vulkan/vulkan_memory_manager.hpp
-  vulkan/vulkan_mesh_object_impl.cpp
-  vulkan/vulkan_object_manager.cpp
-  vulkan/vulkan_object_manager.hpp
-  vulkan/vulkan_param_descriptor.cpp
-  vulkan/vulkan_param_descriptor.hpp
-  vulkan/vulkan_pipeline.cpp
-  vulkan/vulkan_pipeline.hpp
-  vulkan/vulkan_staging_buffer.cpp
-  vulkan/vulkan_staging_buffer.hpp
-  vulkan/vulkan_texture.cpp
-  vulkan/vulkan_texture.hpp
-  vulkan/vulkan_utils.cpp
-  vulkan/vulkan_utils.hpp
-  vulkan/vulkan_vertex_array_buffer_impl.cpp
 )
+
+if (VULKAN)
+  append(DRAPE_TESTABLE_SRC
+    vulkan/vulkan_base_context.cpp
+    vulkan/vulkan_base_context.hpp
+    vulkan/vulkan_context_factory.cpp
+    vulkan/vulkan_context_factory.hpp
+    vulkan/vulkan_gpu_buffer_impl.cpp
+    vulkan/vulkan_gpu_buffer_impl.hpp
+    vulkan/vulkan_gpu_program.hpp
+    vulkan/vulkan_layers.cpp
+    vulkan/vulkan_layers.hpp
+    vulkan/vulkan_memory_manager.cpp
+    vulkan/vulkan_memory_manager.hpp
+    vulkan/vulkan_mesh_object_impl.cpp
+    vulkan/vulkan_object_manager.cpp
+    vulkan/vulkan_object_manager.hpp
+    vulkan/vulkan_param_descriptor.cpp
+    vulkan/vulkan_param_descriptor.hpp
+    vulkan/vulkan_pipeline.cpp
+    vulkan/vulkan_pipeline.hpp
+    vulkan/vulkan_staging_buffer.cpp
+    vulkan/vulkan_staging_buffer.hpp
+    vulkan/vulkan_texture.cpp
+    vulkan/vulkan_texture.hpp
+    vulkan/vulkan_utils.cpp
+    vulkan/vulkan_utils.hpp
+    vulkan/vulkan_vertex_array_buffer_impl.cpp
+  )
+endif()
 
 if (PLATFORM_IPHONE OR PLATFORM_MAC)
   append(DRAPE_TESTABLE_SRC
@@ -175,6 +180,10 @@ omim_add_library(${PROJECT_NAME} ${SRC})
 # drape renders with OpenGL ES 3; its entry points come from libGLESv2, not desktop libGL.
 find_package(OpenGL REQUIRED COMPONENTS GLES3)
 
+if (VULKAN)
+  target_link_libraries(${PROJECT_NAME} PUBLIC vulkan_wrapper)
+endif()
+
 if (PLATFORM_MAC)
   set_target_properties(${PROJECT_NAME} PROPERTIES XCODE_ATTRIBUTE_CLANG_ENABLE_OBJC_ARC YES)
 endif()
@@ -195,7 +204,6 @@ target_link_libraries(${PROJECT_NAME}
     # Static harfbuzz (with hb-ft) must precede static freetype on the link line.
     harfbuzz::harfbuzz
     Freetype::Freetype
-    vulkan_wrapper
     stb_image
     expat::expat
     glm::glm-header-only

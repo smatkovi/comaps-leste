@@ -1,11 +1,15 @@
 #include "shaders/program_manager.hpp"
 #include "shaders/gl_program_pool.hpp"
+
+#if defined(OMIM_VULKAN_AVAILABLE)
 #include "shaders/vulkan_program_params.hpp"
 #include "shaders/vulkan_program_pool.hpp"
 
+#include "drape/vulkan/vulkan_base_context.hpp"
+#endif
+
 #include "drape/gl_constants.hpp"
 #include "drape/gl_functions.hpp"
-#include "drape/vulkan/vulkan_base_context.hpp"
 
 #include "base/assert.hpp"
 #include "base/logging.hpp"
@@ -32,7 +36,9 @@ void ProgramManager::Init(ref_ptr<dp::GraphicsContext> context)
   }
   else if (apiVersion == dp::ApiVersion::Vulkan)
   {
+#if defined(OMIM_VULKAN_AVAILABLE)
     InitForVulkan(context);
+#endif
   }
   else
   {
@@ -52,7 +58,9 @@ void ProgramManager::Destroy(ref_ptr<dp::GraphicsContext> context)
   }
   else if (apiVersion == dp::ApiVersion::Vulkan)
   {
+#if defined(OMIM_VULKAN_AVAILABLE)
     DestroyForVulkan(context);
+#endif
   }
 }
 
@@ -78,6 +86,7 @@ void ProgramManager::InitForOpenGL(ref_ptr<dp::GraphicsContext> context)
   m_paramsSetter = make_unique_dp<GLProgramParamsSetter>();
 }
 
+#if defined(OMIM_VULKAN_AVAILABLE)
 void ProgramManager::InitForVulkan(ref_ptr<dp::GraphicsContext> context)
 {
   m_pool = make_unique_dp<vulkan::VulkanProgramPool>(context);
@@ -96,6 +105,7 @@ void ProgramManager::DestroyForVulkan(ref_ptr<dp::GraphicsContext> context)
   ASSERT(dynamic_cast<vulkan::VulkanProgramPool *>(m_pool.get()) != nullptr, ());
   static_cast<vulkan::VulkanProgramPool *>(m_pool.get())->Destroy(vulkanContext);
 }
+#endif
 
 ref_ptr<dp::GpuProgram> ProgramManager::GetProgram(Program program)
 {

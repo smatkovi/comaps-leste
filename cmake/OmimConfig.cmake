@@ -51,6 +51,10 @@ if (USE_HEAPPROF)
   message(STATUS "Heap Profiler is enabled")
 endif()
 
+if (VULKAN)
+  add_definitions(-DOMIM_VULKAN_AVAILABLE)
+endif()
+
 if (ENABLE_VULKAN_DIAGNOSTICS)
   message(WARNING "Vulkan diagnostics are enabled. Be aware of performance impact!")
   add_definitions(-DENABLE_VULKAN_DIAGNOSTICS)

@@ -21,8 +21,10 @@ extern drape_ptr<dp::HWTextureAllocator> CreateMetalAllocator();
 extern ref_ptr<dp::HWTextureAllocator> GetDefaultMetalAllocator();
 #endif
 
+#if defined(OMIM_VULKAN_AVAILABLE)
 extern drape_ptr<dp::HWTextureAllocator> CreateVulkanAllocator();
 extern ref_ptr<dp::HWTextureAllocator> GetDefaultVulkanAllocator();
+#endif
 
 namespace dp
 {
@@ -273,7 +275,13 @@ drape_ptr<HWTextureAllocator> CreateAllocator(ref_ptr<dp::GraphicsContext> conte
   }
 
   if (apiVersion == dp::ApiVersion::Vulkan)
+  {
+#if defined(OMIM_VULKAN_AVAILABLE)
     return CreateVulkanAllocator();
+#endif
+    CHECK(false, ("Vulkan rendering is not built (VULKAN=OFF)."));
+    return nullptr;
+  }
 
   if (apiVersion == dp::ApiVersion::OpenGLES3)
     return make_unique_dp<OpenGLHWTextureAllocator>();
@@ -299,7 +307,13 @@ ref_ptr<HWTextureAllocator> GetDefaultAllocator(ref_ptr<dp::GraphicsContext> con
   }
 
   if (apiVersion == dp::ApiVersion::Vulkan)
+  {
+#if defined(OMIM_VULKAN_AVAILABLE)
     return GetDefaultVulkanAllocator();
+#endif
+    CHECK(false, ("Vulkan rendering is not built (VULKAN=OFF)."));
+    return nullptr;
+  }
 
   static OpenGLHWTextureAllocator s_allocator;
   return make_ref<HWTextureAllocator>(&s_allocator);

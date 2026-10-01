@@ -2,7 +2,9 @@
 #include "drape/drape_global.hpp"
 #include "drape/gl_constants.hpp"
 #include "drape/gl_functions.hpp"
+#if defined(OMIM_VULKAN_AVAILABLE)
 #include "drape/vulkan/vulkan_base_context.hpp"
+#endif
 
 #include "platform/settings.hpp"
 
@@ -48,10 +50,12 @@ void SupportManager::Init(ref_ptr<GraphicsContext> context)
   }
   else if (apiVersion == dp::ApiVersion::Vulkan)
   {
+#if defined(OMIM_VULKAN_AVAILABLE)
     ref_ptr<dp::vulkan::VulkanBaseContext> vulkanContext = context;
     auto const & props = vulkanContext->GetGpuProperties();
     m_maxLineWidth = std::max(props.limits.lineWidthRange[0], props.limits.lineWidthRange[1]);
     m_maxTextureSize = vulkanContext->GetGpuProperties().limits.maxImageDimension2D;
+#endif
   }
   LOG(LINFO, ("Max line width =", m_maxLineWidth, "| Max texture size =", m_maxTextureSize));
 

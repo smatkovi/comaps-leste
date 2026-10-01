@@ -132,11 +132,17 @@ target_sources(${PROJECT_NAME}
     program_pool.hpp
     programs.hpp
     GL/shader_index.txt
-    vulkan_program_params.cpp
-    vulkan_program_params.hpp
-    vulkan_program_pool.cpp
-    vulkan_program_pool.hpp
 )
+
+if (VULKAN)
+  target_sources(${PROJECT_NAME}
+    PRIVATE
+      vulkan_program_params.cpp
+      vulkan_program_params.hpp
+      vulkan_program_pool.cpp
+      vulkan_program_pool.hpp
+  )
+endif()
 
 if (PLATFORM_IPHONE OR PLATFORM_MAC)
   target_sources(${PROJECT_NAME}

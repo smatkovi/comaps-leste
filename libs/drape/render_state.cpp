@@ -6,10 +6,12 @@
 #include "drape/gl_gpu_program.hpp"
 #include "drape/hw_texture.hpp"
 
+#if defined(OMIM_VULKAN_AVAILABLE)
 #include "drape/vulkan/vulkan_base_context.hpp"
 #include "drape/vulkan/vulkan_gpu_program.hpp"
 #include "drape/vulkan/vulkan_param_descriptor.hpp"
 #include "drape/vulkan/vulkan_texture.hpp"
+#endif
 
 namespace dp
 {
@@ -239,6 +241,7 @@ void TextureState::ApplyTextures(ref_ptr<GraphicsContext> context, RenderState c
   }
   else if (apiVersion == dp::ApiVersion::Vulkan)
   {
+#if defined(OMIM_VULKAN_AVAILABLE)
     ref_ptr<dp::vulkan::VulkanBaseContext> vulkanContext = context;
     vulkanContext->ClearParamDescriptors();
     ref_ptr<dp::vulkan::VulkanGpuProgram> p = program;
@@ -271,6 +274,7 @@ void TextureState::ApplyTextures(ref_ptr<GraphicsContext> context, RenderState c
       descriptor.m_id = texture.second->GetID();
       vulkanContext->ApplyParamDescriptor(std::move(descriptor));
     }
+#endif
   }
   else
   {
@@ -299,9 +303,11 @@ void ApplyState(ref_ptr<GraphicsContext> context, ref_ptr<GpuProgram> program, R
   }
   else if (apiVersion == dp::ApiVersion::Vulkan)
   {
+#if defined(OMIM_VULKAN_AVAILABLE)
     ref_ptr<dp::vulkan::VulkanBaseContext> vulkanContext = context;
     vulkanContext->SetProgram(program);
     vulkanContext->SetBlendingEnabled(state.GetBlending().m_isEnabled);
+#endif
   }
   else
   {
@@ -333,11 +339,13 @@ void ApplyState(ref_ptr<GraphicsContext> context, ref_ptr<GpuProgram> program, R
     }
     else if (apiVersion == dp::ApiVersion::Vulkan)
     {
+#if defined(OMIM_VULKAN_AVAILABLE)
       ASSERT_GREATER_OR_EQUAL(state.GetLineWidth(), 0, ());
       ref_ptr<dp::vulkan::VulkanBaseContext> vulkanContext = context;
       VkCommandBuffer commandBuffer = vulkanContext->GetCurrentRenderingCommandBuffer();
       CHECK(commandBuffer != nullptr, ());
       vkCmdSetLineWidth(commandBuffer, static_cast<float>(state.GetLineWidth()));
+#endif
     }
   }
 }

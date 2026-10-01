@@ -170,7 +170,9 @@ MeshObject::MeshObject(ref_ptr<dp::GraphicsContext> context, DrawPrimitive drawP
   }
   else if (apiVersion == dp::ApiVersion::Vulkan)
   {
+#if defined(OMIM_VULKAN_AVAILABLE)
     InitForVulkan(context);
+#endif
   }
   CHECK(m_impl != nullptr, ());
 }
