@@ -15,7 +15,11 @@ GLProgramPool::GLProgramPool(dp::ApiVersion apiVersion) : m_apiVersion(apiVersio
 {
   ProgramParams::Init();
 
-  if (m_apiVersion == dp::ApiVersion::OpenGLES3)
+  if (m_apiVersion == dp::ApiVersion::OpenGLES2)
+  {
+    m_baseDefines = std::string(GLES2_SHADER_VERSION);
+  }
+  else if (m_apiVersion == dp::ApiVersion::OpenGLES3)
   {
 #if defined(OMIM_OS_DESKTOP)
     m_baseDefines = std::string(GL3_SHADER_VERSION);

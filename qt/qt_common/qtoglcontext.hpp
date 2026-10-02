@@ -27,6 +27,7 @@ public:
   void Resize(uint32_t w, uint32_t h) override;
 
   bool AcquireFrame();
+  bool HasNewFrame();
   GLuint GetTextureHandle() const;
   QRectF const & GetTexRect() const;
   QSize GetTextureSize() const;

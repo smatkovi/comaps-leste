@@ -133,7 +133,7 @@ void Framebuffer::SetSize(ref_ptr<dp::GraphicsContext> context, uint32_t width, 
     m_depthStencilRef->SetSize(context, m_width, m_height);
 
   auto const apiVersion = context->GetApiVersion();
-  if (apiVersion == dp::ApiVersion::OpenGLES3)
+  if (dp::IsOpenGLApi(apiVersion))
   {
     glConst depthAttachmentId = 0;
     glConst stencilAttachmentId = 0;
@@ -147,7 +147,9 @@ void Framebuffer::SetSize(ref_ptr<dp::GraphicsContext> context, uint32_t width, 
     GLFunctions::glBindFramebuffer(m_framebufferId);
 
     GLFunctions::glFramebufferTexture2D(gl_const::GLColorAttachment, m_colorTexture->GetID());
-    if (depthAttachmentId != stencilAttachmentId)
+    // OpenGL ES2 has no GL_DEPTH_STENCIL_ATTACHMENT, a packed depth-stencil texture
+    // (OES_packed_depth_stencil) is attached to both attachment points.
+    if (depthAttachmentId != stencilAttachmentId || apiVersion == dp::ApiVersion::OpenGLES2)
     {
       GLFunctions::glFramebufferTexture2D(gl_const::GLDepthAttachment, depthAttachmentId);
       GLFunctions::glFramebufferTexture2D(gl_const::GLStencilAttachment, stencilAttachmentId);

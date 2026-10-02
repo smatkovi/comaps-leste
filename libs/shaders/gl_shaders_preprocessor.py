@@ -127,7 +127,8 @@ def write_definition_file(defines_file, generation_dir):
         output_file.write("namespace gpu\n")
         output_file.write("{\n")
         output_file.write("extern char const * GL3_SHADER_VERSION;\n")
-        output_file.write("extern char const * GLES3_SHADER_VERSION;\n\n")
+        output_file.write("extern char const * GLES3_SHADER_VERSION;\n")
+        output_file.write("extern char const * GLES2_SHADER_VERSION;\n\n")
         output_file.write("extern GLProgramInfo const & GetProgramInfo(dp::ApiVersion apiVersion, Program program);\n")
         output_file.write("}  // namespace gpu\n")
 
@@ -165,7 +166,26 @@ def get_shaders_lib_content(shader_file, shaders_library):
     return lib_content
 
 
-def write_shader_line(output_file, line, shader_file, binding_info):
+GLES2_SUFFIX = "_GLES2"
+
+
+def convert_line_to_gles2(line, is_vertex_shader):
+    # Translates a GLSL ES 3.00 line (with layout qualifiers already removed) to GLSL ES 1.00.
+    if is_vertex_shader:
+        line = re.sub(r"^(\s*)in\s+", r"\1attribute ", line)
+        line = re.sub(r"^(\s*)out\s+", r"\1varying ", line)
+        line = re.sub(r"\btextureLod\s*\(", "texture2DLod(", line)
+    else:
+        line = re.sub(r"^(\s*)in\s+", r"\1varying ", line)
+        # The only fragment shader output becomes gl_FragColor.
+        line = re.sub(r"^(\s*)out\s+vec4\s+(\w+)\s*;", r"\1#define \2 gl_FragColor", line)
+        # There is no explicit LOD sampling in ES 1.00 fragment shaders, use biased sampling instead.
+        line = re.sub(r"\btextureLod\s*\(", "texture2D(", line)
+    line = re.sub(r"\btexture\s*\(", "texture2D(", line)
+    return line
+
+
+def write_shader_line(output_file, line, shader_file, binding_info, gles2=False):
     if line.lstrip().startswith("//") or line == '\n' or len(line) == 0:
         return False
 
@@ -213,7 +233,9 @@ def write_shader_line(output_file, line, shader_file, binding_info):
     if binding_index and sampler_name:
         binding_info[shader_file].append({sampler_name: binding_index})
     
-    if not ubo_started:    
+    if not ubo_started:
+        if gles2:
+            output_line = convert_line_to_gles2(output_line, shader_file.find(VERTEX_SHADER_EXT) >= 0)
         output_file.write("  %s \\n\\\n" % output_line)
         
     return ubo_started
@@ -241,7 +263,7 @@ def write_uniform_shader_line(output_file, line, shader_file, binding_info):
     return False
 
 
-def write_shader_body(output_file, shader_file, shader_dir, shaders_library, binding_info):
+def write_shader_body(output_file, shader_file, shader_dir, shaders_library, binding_info, gles2):
     lib_content = get_shaders_lib_content(shader_file, shaders_library)
     ubo_started = False
     for line in open(os.path.join(shader_dir, shader_file)):
@@ -251,8 +273,8 @@ def write_shader_body(output_file, shader_file, shader_dir, shaders_library, bin
             continue
         if line.lstrip().startswith("void main"):
             for lib_line in lib_content.splitlines():
-                write_shader_line(output_file, lib_line, shader_file, binding_info)
-        ubo_started = write_shader_line(output_file, line, shader_file, binding_info)
+                write_shader_line(output_file, lib_line, shader_file, binding_info, gles2)
+        ubo_started = write_shader_line(output_file, line, shader_file, binding_info, gles2)
         if ubo_started:
             binding_info[shader_file].append({UNIFORMS_KEY: []})
     
@@ -262,10 +284,16 @@ def write_shader_body(output_file, shader_file, shader_dir, shaders_library, bin
 def write_shader(output_file, shader_file, shader_dir, shaders_library, binding_info):
     output_file.write("char const %s[] = \" \\\n" % format_shader_source_name(shader_file))
     write_shader_gles_header(output_file)
-    write_shader_body(output_file, shader_file, shader_dir, shaders_library, binding_info)
+    write_shader_body(output_file, shader_file, shader_dir, shaders_library, binding_info, False)
+
+    # GLSL ES 1.00 variant for the OpenGL ES2 path. Bindings were already collected above.
+    output_file.write("char const %s%s[] = \" \\\n" % (format_shader_source_name(shader_file), GLES2_SUFFIX))
+    write_shader_gles_header(output_file)
+    gles2_binding_info = {shader_file: []}
+    write_shader_body(output_file, shader_file, shader_dir, shaders_library, gles2_binding_info, True)
 
 
-def write_gpu_programs_map(file, programs_def, binding_info):
+def write_gpu_programs_map(file, programs_def, binding_info, suffix):
     for program in programs_def.keys():
         vertex_shader = programs_def[program][0]
         vertex_source_name = format_shader_source_name(vertex_shader)
@@ -275,8 +303,8 @@ def write_gpu_programs_map(file, programs_def, binding_info):
         
         check_bindings(vertex_shader, fragment_shader, binding_info[vertex_shader], binding_info[fragment_shader])
 
-        file.write("    GLProgramInfo(\"%s\", \"%s\", %s, %s),\n" % (
-            vertex_source_name, fragment_source_name, vertex_source_name, fragment_source_name))
+        file.write("    GLProgramInfo(\"%s\", \"%s\", %s%s, %s%s),\n" % (
+            vertex_source_name, fragment_source_name, vertex_source_name, suffix, fragment_source_name, suffix))
 
 
 def check_bindings(vs, fs, vs_bindings, fs_bindings):
@@ -318,7 +346,8 @@ def write_implementation_file(programs_def, shader_index, shader_dir, impl_file,
         file.write("#else\n")
         file.write("  char const * GL3_SHADER_VERSION = \"#version 410 core \\n\";\n")
         file.write("#endif\n")
-        file.write("char const * GLES3_SHADER_VERSION = \"#version 300 es \\n\";\n\n")
+        file.write("char const * GLES3_SHADER_VERSION = \"#version 300 es \\n\";\n")
+        file.write("char const * GLES2_SHADER_VERSION = \"#version 100 \\n\";\n\n")
 
         for shader in shader_index.keys():
             binding_info[shader] = []
@@ -326,9 +355,16 @@ def write_implementation_file(programs_def, shader_index, shader_dir, impl_file,
 
         file.write("GLProgramInfo const & GetProgramInfo(dp::ApiVersion apiVersion, Program program)\n")
         file.write("{\n")
+        file.write("  if (apiVersion == dp::ApiVersion::OpenGLES2)\n")
+        file.write("  {\n")
+        file.write("    static std::array<GLProgramInfo, static_cast<size_t>(Program::ProgramsCount)> gpuIndex = {{\n")
+        write_gpu_programs_map(file, programs_def, binding_info, GLES2_SUFFIX)
+        file.write("    }};\n")
+        file.write("    return gpuIndex[static_cast<size_t>(program)];\n")
+        file.write("  }\n")
         file.write("  CHECK_EQUAL(apiVersion, dp::ApiVersion::OpenGLES3, ());\n")
         file.write("  static std::array<GLProgramInfo, static_cast<size_t>(Program::ProgramsCount)> gpuIndex = {{\n")
-        write_gpu_programs_map(file, programs_def, binding_info)
+        write_gpu_programs_map(file, programs_def, binding_info, '')
         file.write("  }};\n")
         file.write("  return gpuIndex[static_cast<size_t>(program)];\n")
         file.write("}\n")

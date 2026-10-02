@@ -35,7 +35,7 @@ void AlphaBlendingState::Apply(ref_ptr<GraphicsContext> context)
 {
   // For Metal Rendering these settings must be set in the pipeline state.
   auto const apiVersion = context->GetApiVersion();
-  if (apiVersion == dp::ApiVersion::OpenGLES3)
+  if (dp::IsOpenGLApi(apiVersion))
   {
     GLFunctions::glBlendEquation(gl_const::GLAddBlend);
     GLFunctions::glBlendFunc(gl_const::GLSrcAlpha, gl_const::GLOneMinusSrcAlpha);
@@ -48,7 +48,7 @@ void Blending::Apply(ref_ptr<GraphicsContext> context, ref_ptr<GpuProgram> progr
 {
   // For Metal Rendering these settings must be set in the pipeline state.
   auto const apiVersion = context->GetApiVersion();
-  if (apiVersion == dp::ApiVersion::OpenGLES3)
+  if (dp::IsOpenGLApi(apiVersion))
     if (m_isEnabled)
       GLFunctions::glEnable(gl_const::GLBlending);
     else
@@ -216,7 +216,7 @@ void TextureState::ApplyTextures(ref_ptr<GraphicsContext> context, RenderState c
 {
   m_usedSlots = 0;
   auto const apiVersion = context->GetApiVersion();
-  if (apiVersion == dp::ApiVersion::OpenGLES3)
+  if (dp::IsOpenGLApi(apiVersion))
   {
     ref_ptr<dp::GLGpuProgram> p = program;
     for (auto const & texture : state.GetTextures())
@@ -328,7 +328,7 @@ void ApplyState(ref_ptr<GraphicsContext> context, ref_ptr<GpuProgram> program, R
 
   if (state.GetDrawAsLine())
   {
-    if (apiVersion == dp::ApiVersion::OpenGLES3)
+    if (dp::IsOpenGLApi(apiVersion))
     {
       ASSERT_GREATER_OR_EQUAL(state.GetLineWidth(), 0, ());
       GLFunctions::glLineWidth(static_cast<uint32_t>(state.GetLineWidth()));

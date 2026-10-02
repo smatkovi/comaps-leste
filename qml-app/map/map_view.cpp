@@ -47,7 +47,13 @@ MapView::MapView(QQuickItem * parent) : QQuickItem(parent)
   UpdateInputFlags();
 
   m_frameTimer.setInterval(1000 / 60);
-  connect(&m_frameTimer, &QTimer::timeout, this, &QQuickItem::update);
+  // Repaint only when drape has rendered a new frame: an idle map then costs no GPU time
+  // (scene graph render + swap), which matters on slow devices.
+  connect(&m_frameTimer, &QTimer::timeout, this, [this] {
+    auto * factory = MapEngine::Instance().GetContextFactory();
+    if (factory == nullptr || factory->HasNewFrame())
+      update();
+  });
   connect(&MapEngine::Instance(), &MapEngine::activeViewChanged, this, [this] {
     if (active())
       m_frameTimer.start();

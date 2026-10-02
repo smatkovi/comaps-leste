@@ -5,6 +5,7 @@
 #include "base/assert.hpp"
 #include "base/logging.hpp"
 
+#include <cstring>
 #include <set>
 
 namespace dp
@@ -64,6 +65,26 @@ int8_t GLGpuProgram::GetUniformLocation(std::string const & uniformName) const
     return -1;
 
   return it->second.m_location;
+}
+
+GLGpuProgram::UniformInfo const * GLGpuProgram::FindUniform(std::string const & uniformName) const
+{
+  auto const it = m_uniforms.find(uniformName);
+  if (it == m_uniforms.end())
+    return nullptr;
+
+  return &it->second;
+}
+
+bool GLGpuProgram::UniformInfo::UpdateCachedValue(void const * value, size_t size) const
+{
+  CHECK_LESS_OR_EQUAL(size, m_cachedValue.size(), ());
+  if (m_cachedValueSize == size && std::memcmp(m_cachedValue.data(), value, size) == 0)
+    return false;
+
+  std::memcpy(m_cachedValue.data(), value, size);
+  m_cachedValueSize = static_cast<uint8_t>(size);
+  return true;
 }
 
 glConst GLGpuProgram::GetUniformType(std::string const & uniformName) const

@@ -5,6 +5,8 @@
 
 #include "drape/pointers.hpp"
 
+#include "qt/qt_common/helpers.hpp"
+
 #include "base/assert.hpp"
 #include "base/logging.hpp"
 
@@ -165,7 +167,8 @@ void MapEngine::Create(QSize pixelSize, double ratio)
   m_contextFactory = std::make_unique<qt::common::QtOGLContextFactory>(shareContext);
 
   Framework::DrapeCreationParams p;
-  p.m_apiVersion = dp::ApiVersion::OpenGLES3;
+  p.m_apiVersion = qt::common::GetOpenGLApiVersion(*shareContext);
+  LOG(LINFO, ("Graphics API:", p.m_apiVersion));
   p.m_surfaceWidth = pixelSize.width();
   p.m_surfaceHeight = pixelSize.height();
   p.m_visualScale = static_cast<float>(ratio);

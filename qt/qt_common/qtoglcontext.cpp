@@ -26,6 +26,14 @@ QtRenderOGLContext::QtRenderOGLContext(QOpenGLContext * rootContext, QOffscreenS
 
 void QtRenderOGLContext::Present()
 {
+  // Only the color buffer of the frame is used further, tell tile-based GPUs that
+  // depth/stencil don't need to be written back to memory.
+  if (m_backFrame != nullptr)
+  {
+    m_backFrame->bind();
+    GLFunctions::glDiscardDepthStencil(false /* isDefaultFramebuffer */);
+  }
+
   GLFunctions::glFinish();
 
   std::lock_guard<std::mutex> lock(m_frameMutex);
@@ -95,6 +103,12 @@ bool QtRenderOGLContext::AcquireFrame()
   m_frameUpdated = false;
 
   return true;
+}
+
+bool QtRenderOGLContext::HasNewFrame()
+{
+  std::lock_guard lock(m_frameMutex);
+  return m_frameUpdated;
 }
 
 QRectF const & QtRenderOGLContext::GetTexRect() const

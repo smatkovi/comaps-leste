@@ -39,7 +39,7 @@ std::string DebugPrint(HWTexture::Params const & p)
 void UnpackFormat(ref_ptr<dp::GraphicsContext> context, TextureFormat format, glConst & layout, glConst & pixelType)
 {
   auto const apiVersion = context->GetApiVersion();
-  CHECK(apiVersion == dp::ApiVersion::OpenGLES3, ());
+  CHECK(dp::IsOpenGLApi(apiVersion), ());
 
   switch (format)
   {
@@ -49,12 +49,15 @@ void UnpackFormat(ref_ptr<dp::GraphicsContext> context, TextureFormat format, gl
     return;
 
   case TextureFormat::Red:
-    layout = gl_const::GLRed;
+    // OpenGL ES2 has no GL_RED, but a luminance texture is sampled as (L, L, L, 1),
+    // so shaders reading the .r channel work unchanged.
+    layout = apiVersion == dp::ApiVersion::OpenGLES2 ? gl_const::GLLuminance : gl_const::GLRed;
     pixelType = gl_const::GL8BitOnChannel;
     return;
 
   case TextureFormat::RedGreen:
-    layout = gl_const::GLRedGreen;
+    // On OpenGL ES2 2-channel textures are not supported.
+    layout = apiVersion == dp::ApiVersion::OpenGLES2 ? gl_const::GLRGBA : gl_const::GLRedGreen;
     pixelType = gl_const::GL8BitOnChannel;
     return;
 
@@ -283,7 +286,7 @@ drape_ptr<HWTextureAllocator> CreateAllocator(ref_ptr<dp::GraphicsContext> conte
     return nullptr;
   }
 
-  if (apiVersion == dp::ApiVersion::OpenGLES3)
+  if (dp::IsOpenGLApi(apiVersion))
     return make_unique_dp<OpenGLHWTextureAllocator>();
 
 #if defined(OMIM_OS_IPHONE)

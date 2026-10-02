@@ -16,6 +16,8 @@ public:
   static dp::GLExtensionsList ExtensionsList;
 
   static void Init(dp::ApiVersion apiVersion);
+  // Must be called when a GL context is (re)created and made current on the calling thread.
+  static void ResetStateCache();
 
   static bool glHasExtension(std::string const & name);
   static void glClearColor(float r, float g, float b, float a);
@@ -153,6 +155,9 @@ public:
   static void glBindFramebuffer(uint32_t fbo);
   static void glFramebufferTexture2D(glConst attachment, glConst texture);
   static uint32_t glCheckFramebufferStatus();
+  // Hints a tile-based GPU that depth/stencil contents of the bound framebuffer are not needed anymore.
+  // No-op if GL_EXT_discard_framebuffer is not available.
+  static void glDiscardDepthStencil(bool isDefaultFramebuffer);
 };
 
 void CheckGLError(base::SrcPoint const & src);

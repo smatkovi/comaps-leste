@@ -74,12 +74,15 @@ private:
   template <typename ParamType>
   static bool Apply(ref_ptr<dp::GLGpuProgram> program, std::string const & name, ParamType const & p)
   {
-    auto const location = program->GetUniformLocation(name);
-    if (location < 0)
+    auto const * info = program->FindUniform(name);
+    if (info == nullptr || info->m_location < 0)
       return false;
 
-    ASSERT_EQUAL(program->GetUniformType(name), GLTypeWrapper<ParamType>::Value(), ());
-    dp::UniformValue::ApplyRaw(location, p);
+    ASSERT_EQUAL(info->m_type, GLTypeWrapper<ParamType>::Value(), ());
+    static_assert(sizeof(ParamType) <= sizeof(glsl::mat4));
+    // Skip redundant uploads, most uniforms (projection, pivot transform, colors) stay the same for many draw calls.
+    if (info->UpdateCachedValue(&p, sizeof(p)))
+      dp::UniformValue::ApplyRaw(info->m_location, p);
     return true;
   }
 };

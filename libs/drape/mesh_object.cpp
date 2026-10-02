@@ -2,6 +2,7 @@
 
 #include "drape/drape_global.hpp"
 #include "drape/gl_constants.hpp"
+#include "drape/gl_extensions_list.hpp"
 #include "drape/gl_functions.hpp"
 #include "drape/gl_gpu_program.hpp"
 #include "drape/glsl_func.hpp"
@@ -37,8 +38,12 @@ public:
   {
     UNUSED_VALUE(context);
 
-    m_VAO = GLFunctions::glGenVertexArray();
-    GLFunctions::glBindVertexArray(m_VAO);
+    bool const isVAOSupported = GLFunctions::ExtensionsList.IsSupported(dp::GLExtensionsList::VertexArrayObject);
+    if (isVAOSupported)
+    {
+      m_VAO = GLFunctions::glGenVertexArray();
+      GLFunctions::glBindVertexArray(m_VAO);
+    }
 
     for (auto & buffer : m_mesh->m_buffers)
     {
@@ -60,18 +65,12 @@ public:
                                   m_mesh->m_indices.data(), gl_const::GLStaticDraw);
       }
 
-      ref_ptr<dp::GLGpuProgram> p = program;
-      for (auto const & attribute : buffer->m_attributes)
-      {
-        int8_t const attributePosition = p->GetAttributeLocation(attribute.m_attributeName);
-        ASSERT_NOT_EQUAL(attributePosition, -1, ());
-        GLFunctions::glEnableVertexAttribute(attributePosition);
-        GLFunctions::glVertexAttributePointer(attributePosition, attribute.m_componentsCount, attribute.m_type, false,
-                                              buffer->GetStrideInBytes(), attribute.m_offset);
-      }
+      if (isVAOSupported)
+        BindAttributes(program, *buffer);
     }
 
-    GLFunctions::glBindVertexArray(0);
+    if (isVAOSupported)
+      GLFunctions::glBindVertexArray(0);
     GLFunctions::glBindBuffer(0, gl_const::GLArrayBuffer);
     if (!m_mesh->m_indices.empty())
       GLFunctions::glBindBuffer(0, gl_const::GLElementArrayBuffer);
@@ -123,11 +122,28 @@ public:
     GLFunctions::glBindBuffer(0, gl_const::GLElementArrayBuffer);
   }
 
-  void Bind(ref_ptr<dp::GpuProgram> program) override { GLFunctions::glBindVertexArray(m_VAO); }
+  void Bind(ref_ptr<dp::GpuProgram> program) override
+  {
+    if (m_VAO != 0)
+    {
+      GLFunctions::glBindVertexArray(m_VAO);
+      return;
+    }
+
+    // No VAO (OpenGL ES2 without OES_vertex_array_object): bind buffers and attributes on each draw.
+    for (auto const & buffer : m_mesh->m_buffers)
+    {
+      GLFunctions::glBindBuffer(buffer->m_bufferId, gl_const::GLArrayBuffer);
+      BindAttributes(program, *buffer);
+    }
+    if (m_indexBuffer != 0)
+      GLFunctions::glBindBuffer(m_indexBuffer, gl_const::GLElementArrayBuffer);
+  }
 
   void Unbind() override
   {
-    GLFunctions::glBindVertexArray(0);
+    if (m_VAO != 0)
+      GLFunctions::glBindVertexArray(0);
     GLFunctions::glBindBuffer(0, gl_const::GLArrayBuffer);
     if (m_indexBuffer != 0)
       GLFunctions::glBindBuffer(0, gl_const::GLElementArrayBuffer);
@@ -148,6 +164,20 @@ public:
   }
 
 private:
+  template <typename TBuffer>
+  static void BindAttributes(ref_ptr<dp::GpuProgram> program, TBuffer const & buffer)
+  {
+    ref_ptr<dp::GLGpuProgram> p = program;
+    for (auto const & attribute : buffer.m_attributes)
+    {
+      int8_t const attributePosition = p->GetAttributeLocation(attribute.m_attributeName);
+      ASSERT_NOT_EQUAL(attributePosition, -1, ());
+      GLFunctions::glEnableVertexAttribute(attributePosition);
+      GLFunctions::glVertexAttributePointer(attributePosition, attribute.m_componentsCount, attribute.m_type, false,
+                                            buffer.GetStrideInBytes(), attribute.m_offset);
+    }
+  }
+
   ref_ptr<dp::MeshObject> m_mesh;
   uint32_t m_VAO = 0;
   uint32_t m_indexBuffer = 0;
@@ -158,7 +188,7 @@ MeshObject::MeshObject(ref_ptr<dp::GraphicsContext> context, DrawPrimitive drawP
   , m_debugName(debugName)
 {
   auto const apiVersion = context->GetApiVersion();
-  if (apiVersion == dp::ApiVersion::OpenGLES3)
+  if (dp::IsOpenGLApi(apiVersion))
   {
     InitForOpenGL();
   }

@@ -107,6 +107,7 @@ static_assert(std::is_same_v<GLFunctions::TglDebugProc, decltype(&OpenGLMessageC
 void OGLContext::Init(ApiVersion apiVersion)
 {
   GLFunctions::Init(apiVersion);
+  GLFunctions::ResetStateCache();
 
   GLFunctions::glPixelStore(gl_const::GLUnpackAlignment, 1);
 

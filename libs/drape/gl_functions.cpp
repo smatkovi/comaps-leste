@@ -9,6 +9,8 @@
 #include "std/target_os.hpp"
 
 #include <algorithm>
+#include <array>
+#include <cctype>  // isspace
 #include <cstring>  // strlen
 #include <limits>
 #include <map>
@@ -125,6 +127,8 @@ typedef GLenum(DP_APIENTRY * TglCheckFramebufferStatusFn)(GLenum target);
 
 typedef GLubyte const *(DP_APIENTRY * TglGetStringiFn)(GLenum name, GLuint index);
 
+typedef void(DP_APIENTRY * TglDiscardFramebufferFn)(GLenum target, GLsizei numAttachments, GLenum const * attachments);
+
 TglClearColorFn glClearColorFn = nullptr;
 TglClearFn glClearFn = nullptr;
 TglViewportFn glViewportFn = nullptr;
@@ -202,12 +206,48 @@ TglCheckFramebufferStatusFn glCheckFramebufferStatusFn = nullptr;
 
 TglGetStringiFn glGetStringiFn = nullptr;
 
+TglDiscardFramebufferFn glDiscardFramebufferFn = nullptr;
+
 #if !defined(GL_NUM_EXTENSIONS)
 #define GL_NUM_EXTENSIONS 0x821D
 #endif
 
 std::mutex s_mutex;
 bool s_inited = false;
+
+// Cache of GL state which is set redundantly for every draw call. Each rendering thread has its own
+// GL context, so the cache is per thread. It's reset when a context is initialized.
+struct StateCache
+{
+  static uint32_t constexpr kUnknown = std::numeric_limits<uint32_t>::max();
+
+  // Returns false if |cap| is known to be in the |enabled| state already.
+  bool UpdateCapability(glConst cap, bool enabled)
+  {
+    for (auto & c : m_capabilities)
+    {
+      if (c.m_cap == cap)
+      {
+        if (c.m_state == static_cast<uint32_t>(enabled))
+          return false;
+        c.m_state = static_cast<uint32_t>(enabled);
+        return true;
+      }
+    }
+    return true;
+  }
+
+  struct Capability
+  {
+    glConst m_cap;
+    uint32_t m_state = kUnknown;
+  };
+  std::array<Capability, 5> m_capabilities = {
+      {{GL_BLEND}, {GL_DEPTH_TEST}, {GL_STENCIL_TEST}, {GL_CULL_FACE}, {GL_SCISSOR_TEST}}};
+  uint32_t m_program = kUnknown;
+  uint32_t m_depthFunc = kUnknown;
+};
+thread_local StateCache s_stateCache;
 }  // namespace
 
 #ifdef OMIM_OS_WINDOWS
@@ -228,6 +268,21 @@ TFunc LoadExtension(std::string const & ext)
 #define LOAD_GL_FUNC(type, func) static_cast<type>(&::func)
 #endif
 
+#if defined(OMIM_OS_LINUX)
+// OpenGL ES2 extension entry points (e.g. glGenVertexArraysOES) are not exported by libGLESv2,
+// they are resolved via eglGetProcAddress. EGL is already loaded by the windowing system (Qt).
+template <typename TFunc>
+TFunc LoadES2Extension(char const * name)
+{
+  using TGetProcAddressFn = void * (*)(char const *);
+  static auto const eglGetProcAddressFn = reinterpret_cast<TGetProcAddressFn>(dlsym(RTLD_DEFAULT, "eglGetProcAddress"));
+  void * func = dlsym(RTLD_DEFAULT, name);
+  if (func == nullptr && eglGetProcAddressFn != nullptr)
+    func = eglGetProcAddressFn(name);
+  return reinterpret_cast<TFunc>(func);
+}
+#endif
+
 void GLFunctions::Init(dp::ApiVersion apiVersion)
 {
   std::lock_guard const lock(s_mutex);
@@ -235,18 +290,45 @@ void GLFunctions::Init(dp::ApiVersion apiVersion)
     return;
 
   CurrentApiVersion = apiVersion;
-  ExtensionsList.Init();
+  ExtensionsList.Init(apiVersion);
   s_inited = true;
 
 #if !defined(OMIM_OS_WINDOWS)
-  // OpenGL ES3 api is the same for all systems, except WINDOWS.
-  glGenVertexArraysFn = ::glGenVertexArrays;
-  glBindVertexArrayFn = ::glBindVertexArray;
-  glDeleteVertexArrayFn = ::glDeleteVertexArrays;
-  glUnmapBufferFn = ::glUnmapBuffer;
-  glMapBufferRangeFn = ::glMapBufferRange;
-  glFlushMappedBufferRangeFn = ::glFlushMappedBufferRange;
-  glGetStringiFn = ::glGetStringi;
+  if (CurrentApiVersion == dp::ApiVersion::OpenGLES2)
+  {
+#if defined(OMIM_OS_LINUX)
+    if (ExtensionsList.IsSupported(dp::GLExtensionsList::VertexArrayObject))
+    {
+      glGenVertexArraysFn = LoadES2Extension<TglGenVertexArraysFn>("glGenVertexArraysOES");
+      glBindVertexArrayFn = LoadES2Extension<TglBindVertexArrayFn>("glBindVertexArrayOES");
+      glDeleteVertexArrayFn = LoadES2Extension<TglDeleteVertexArrayFn>("glDeleteVertexArraysOES");
+      if (!glGenVertexArraysFn || !glBindVertexArrayFn || !glDeleteVertexArrayFn)
+      {
+        LOG(LWARNING, ("GL_OES_vertex_array_object is advertised, but its functions can't be loaded"));
+        ExtensionsList.SetExtension(dp::GLExtensionsList::VertexArrayObject, false);
+      }
+    }
+    if (ExtensionsList.IsSupported(dp::GLExtensionsList::DiscardFramebuffer))
+    {
+      glDiscardFramebufferFn = LoadES2Extension<TglDiscardFramebufferFn>("glDiscardFramebufferEXT");
+      if (!glDiscardFramebufferFn)
+        ExtensionsList.SetExtension(dp::GLExtensionsList::DiscardFramebuffer, false);
+    }
+#else
+    CHECK(false, ("OpenGL ES2 is supported only on Linux"));
+#endif
+  }
+  else
+  {
+    // OpenGL ES3 api is the same for all systems, except WINDOWS.
+    glGenVertexArraysFn = ::glGenVertexArrays;
+    glBindVertexArrayFn = ::glBindVertexArray;
+    glDeleteVertexArrayFn = ::glDeleteVertexArrays;
+    glUnmapBufferFn = ::glUnmapBuffer;
+    glMapBufferRangeFn = ::glMapBufferRange;
+    glFlushMappedBufferRangeFn = ::glFlushMappedBufferRange;
+    glGetStringiFn = ::glGetStringi;
+  }
 
   glClearColorFn = LOAD_GL_FUNC(TglClearColorFn, glClearColor);
   glClearFn = LOAD_GL_FUNC(TglClearFn, glClear);
@@ -335,9 +417,35 @@ void GLFunctions::Init(dp::ApiVersion apiVersion)
   glCheckFramebufferStatusFn = LOAD_GL_FUNC(TglCheckFramebufferStatusFn, glCheckFramebufferStatus);
 }
 
+// static
+void GLFunctions::ResetStateCache()
+{
+  s_stateCache = {};
+}
+
 bool GLFunctions::glHasExtension(std::string const & name)
 {
-  ASSERT_EQUAL(CurrentApiVersion, dp::ApiVersion::OpenGLES3, ());
+  ASSERT_NOT_EQUAL(CurrentApiVersion, dp::ApiVersion::Invalid, ());
+  if (CurrentApiVersion == dp::ApiVersion::OpenGLES2)
+  {
+    char const * extensions = reinterpret_cast<char const *>(::glGetString(GL_EXTENSIONS));
+    GLCHECKCALL();
+    if (extensions == nullptr)
+      return false;
+
+    char const * extName = name.c_str();
+    char const * ptr = nullptr;
+    while ((ptr = strstr(extensions, extName)) != nullptr)
+    {
+      char const * end = ptr + strlen(extName);
+      if ((ptr == extensions || isspace(*(ptr - 1))) && (isspace(*end) || *end == '\0'))
+        return true;
+
+      extensions = end;
+    }
+    return false;
+  }
+
   ASSERT(glGetStringiFn != nullptr, ());
   GLint n = 0;
   glGetIntegerv(GL_NUM_EXTENSIONS, &n);
@@ -352,78 +460,78 @@ bool GLFunctions::glHasExtension(std::string const & name)
 
 void GLFunctions::glClearColor(float r, float g, float b, float a)
 {
-  ASSERT_EQUAL(CurrentApiVersion, dp::ApiVersion::OpenGLES3, ());
+  ASSERT_NOT_EQUAL(CurrentApiVersion, dp::ApiVersion::Invalid, ());
   ASSERT(glClearColorFn != nullptr, ());
   GLCHECK(glClearColorFn(r, g, b, a));
 }
 
 void GLFunctions::glClear(uint32_t clearBits)
 {
-  ASSERT_EQUAL(CurrentApiVersion, dp::ApiVersion::OpenGLES3, ());
+  ASSERT_NOT_EQUAL(CurrentApiVersion, dp::ApiVersion::Invalid, ());
   ASSERT(glClearFn != nullptr, ());
   GLCHECK(glClearFn(clearBits));
 }
 
 void GLFunctions::glViewport(uint32_t x, uint32_t y, uint32_t w, uint32_t h)
 {
-  ASSERT_EQUAL(CurrentApiVersion, dp::ApiVersion::OpenGLES3, ());
+  ASSERT_NOT_EQUAL(CurrentApiVersion, dp::ApiVersion::Invalid, ());
   ASSERT(glViewportFn != nullptr, ());
   GLCHECK(glViewportFn(x, y, w, h));
 }
 
 void GLFunctions::glScissor(uint32_t x, uint32_t y, uint32_t w, uint32_t h)
 {
-  ASSERT_EQUAL(CurrentApiVersion, dp::ApiVersion::OpenGLES3, ());
+  ASSERT_NOT_EQUAL(CurrentApiVersion, dp::ApiVersion::Invalid, ());
   ASSERT(glScissorFn != nullptr, ());
   GLCHECK(glScissorFn(x, y, w, h));
 }
 
 void GLFunctions::glFlush()
 {
-  ASSERT_EQUAL(CurrentApiVersion, dp::ApiVersion::OpenGLES3, ());
+  ASSERT_NOT_EQUAL(CurrentApiVersion, dp::ApiVersion::Invalid, ());
   ASSERT(glFlushFn != nullptr, ());
   GLCHECK(glFlushFn());
 }
 
 void GLFunctions::glFinish()
 {
-  ASSERT_EQUAL(CurrentApiVersion, dp::ApiVersion::OpenGLES3, ());
+  ASSERT_NOT_EQUAL(CurrentApiVersion, dp::ApiVersion::Invalid, ());
   GLCHECK(::glFinish());
 }
 
 void GLFunctions::glFrontFace(glConst mode)
 {
-  ASSERT_EQUAL(CurrentApiVersion, dp::ApiVersion::OpenGLES3, ());
+  ASSERT_NOT_EQUAL(CurrentApiVersion, dp::ApiVersion::Invalid, ());
   GLCHECK(::glFrontFace(mode));
 }
 
 void GLFunctions::glCullFace(glConst face)
 {
-  ASSERT_EQUAL(CurrentApiVersion, dp::ApiVersion::OpenGLES3, ());
+  ASSERT_NOT_EQUAL(CurrentApiVersion, dp::ApiVersion::Invalid, ());
   GLCHECK(::glCullFace(face));
 }
 
 void GLFunctions::glStencilOpSeparate(glConst face, glConst sfail, glConst dpfail, glConst dppass)
 {
-  ASSERT_EQUAL(CurrentApiVersion, dp::ApiVersion::OpenGLES3, ());
+  ASSERT_NOT_EQUAL(CurrentApiVersion, dp::ApiVersion::Invalid, ());
   GLCHECK(glStencilOpSeparateFn(face, sfail, dpfail, dppass));
 }
 
 void GLFunctions::glStencilFuncSeparate(glConst face, glConst func, int ref, uint32_t mask)
 {
-  ASSERT_EQUAL(CurrentApiVersion, dp::ApiVersion::OpenGLES3, ());
+  ASSERT_NOT_EQUAL(CurrentApiVersion, dp::ApiVersion::Invalid, ());
   GLCHECK(glStencilFuncSeparateFn(face, func, ref, mask));
 }
 
 void GLFunctions::glPixelStore(glConst name, uint32_t value)
 {
-  ASSERT_EQUAL(CurrentApiVersion, dp::ApiVersion::OpenGLES3, ());
+  ASSERT_NOT_EQUAL(CurrentApiVersion, dp::ApiVersion::Invalid, ());
   GLCHECK(::glPixelStorei(name, value));
 }
 
 int32_t GLFunctions::glGetInteger(glConst pname)
 {
-  ASSERT_EQUAL(CurrentApiVersion, dp::ApiVersion::OpenGLES3, ());
+  ASSERT_NOT_EQUAL(CurrentApiVersion, dp::ApiVersion::Invalid, ());
   GLint value;
   GLCHECK(::glGetIntegerv(pname, &value));
   return (int32_t)value;
@@ -431,7 +539,7 @@ int32_t GLFunctions::glGetInteger(glConst pname)
 
 std::string GLFunctions::glGetString(glConst pname)
 {
-  ASSERT_EQUAL(CurrentApiVersion, dp::ApiVersion::OpenGLES3, ());
+  ASSERT_NOT_EQUAL(CurrentApiVersion, dp::ApiVersion::Invalid, ());
   char const * str = reinterpret_cast<char const *>(::glGetString(pname));
   GLCHECKCALL();
   if (str == nullptr)
@@ -442,7 +550,7 @@ std::string GLFunctions::glGetString(glConst pname)
 
 int32_t GLFunctions::glGetMaxLineWidth()
 {
-  ASSERT_EQUAL(CurrentApiVersion, dp::ApiVersion::OpenGLES3, ());
+  ASSERT_NOT_EQUAL(CurrentApiVersion, dp::ApiVersion::Invalid, ());
   GLint range[2];
   GLCHECK(::glGetIntegerv(GL_ALIASED_LINE_WIDTH_RANGE, range));
   return std::max(range[0], range[1]);
@@ -450,7 +558,7 @@ int32_t GLFunctions::glGetMaxLineWidth()
 
 int32_t GLFunctions::glGetBufferParameter(glConst target, glConst name)
 {
-  ASSERT_EQUAL(CurrentApiVersion, dp::ApiVersion::OpenGLES3, ());
+  ASSERT_NOT_EQUAL(CurrentApiVersion, dp::ApiVersion::Invalid, ());
   GLint result;
   ASSERT(glGetBufferParameterFn != nullptr, ());
   GLCHECK(glGetBufferParameterFn(target, name, &result));
@@ -459,19 +567,21 @@ int32_t GLFunctions::glGetBufferParameter(glConst target, glConst name)
 
 void GLFunctions::glEnable(glConst mode)
 {
-  ASSERT_EQUAL(CurrentApiVersion, dp::ApiVersion::OpenGLES3, ());
-  GLCHECK(::glEnable(mode));
+  ASSERT_NOT_EQUAL(CurrentApiVersion, dp::ApiVersion::Invalid, ());
+  if (s_stateCache.UpdateCapability(mode, true /* enabled */))
+    GLCHECK(::glEnable(mode));
 }
 
 void GLFunctions::glDisable(glConst mode)
 {
-  ASSERT_EQUAL(CurrentApiVersion, dp::ApiVersion::OpenGLES3, ());
-  GLCHECK(::glDisable(mode));
+  ASSERT_NOT_EQUAL(CurrentApiVersion, dp::ApiVersion::Invalid, ());
+  if (s_stateCache.UpdateCapability(mode, false /* enabled */))
+    GLCHECK(::glDisable(mode));
 }
 
 void GLFunctions::glClearDepthValue(double depth)
 {
-  ASSERT_EQUAL(CurrentApiVersion, dp::ApiVersion::OpenGLES3, ());
+  ASSERT_NOT_EQUAL(CurrentApiVersion, dp::ApiVersion::Invalid, ());
 #if defined(OMIM_OS_IPHONE) || defined(OMIM_OS_ANDROID) || defined(OMIM_OS_LINUX)
   GLCHECK(::glClearDepthf(static_cast<GLclampf>(depth)));
 #else
@@ -481,32 +591,35 @@ void GLFunctions::glClearDepthValue(double depth)
 
 void GLFunctions::glDepthMask(bool needWriteToDepthBuffer)
 {
-  ASSERT_EQUAL(CurrentApiVersion, dp::ApiVersion::OpenGLES3, ());
+  ASSERT_NOT_EQUAL(CurrentApiVersion, dp::ApiVersion::Invalid, ());
   GLCHECK(::glDepthMask(convert(needWriteToDepthBuffer)));
 }
 
 void GLFunctions::glDepthFunc(glConst depthFunc)
 {
-  ASSERT_EQUAL(CurrentApiVersion, dp::ApiVersion::OpenGLES3, ());
+  ASSERT_NOT_EQUAL(CurrentApiVersion, dp::ApiVersion::Invalid, ());
+  if (s_stateCache.m_depthFunc == depthFunc)
+    return;
+  s_stateCache.m_depthFunc = depthFunc;
   GLCHECK(::glDepthFunc(depthFunc));
 }
 
 void GLFunctions::glBlendEquation(glConst function)
 {
-  ASSERT_EQUAL(CurrentApiVersion, dp::ApiVersion::OpenGLES3, ());
+  ASSERT_NOT_EQUAL(CurrentApiVersion, dp::ApiVersion::Invalid, ());
   ASSERT(glBlendEquationFn != nullptr, ());
   GLCHECK(glBlendEquationFn(function));
 }
 
 void GLFunctions::glBlendFunc(glConst srcFactor, glConst dstFactor)
 {
-  ASSERT_EQUAL(CurrentApiVersion, dp::ApiVersion::OpenGLES3, ());
+  ASSERT_NOT_EQUAL(CurrentApiVersion, dp::ApiVersion::Invalid, ());
   GLCHECK(::glBlendFunc(srcFactor, dstFactor));
 }
 
 bool GLFunctions::CanEnableDebugMessages()
 {
-  ASSERT_EQUAL(CurrentApiVersion, dp::ApiVersion::OpenGLES3, ());
+  ASSERT_NOT_EQUAL(CurrentApiVersion, dp::ApiVersion::Invalid, ());
   if (glDebugMessageCallbackFn == nullptr)
     return false;
   if (glDebugMessageControlFn == nullptr)
@@ -518,7 +631,7 @@ bool GLFunctions::CanEnableDebugMessages()
 
 void GLFunctions::glDebugMessageCallback(TglDebugProc messageCallback, void * userParam)
 {
-  ASSERT_EQUAL(CurrentApiVersion, dp::ApiVersion::OpenGLES3, ());
+  ASSERT_NOT_EQUAL(CurrentApiVersion, dp::ApiVersion::Invalid, ());
   ASSERT(glDebugMessageCallbackFn != nullptr, ());
   GLCHECK(glDebugMessageCallbackFn(reinterpret_cast<GLDEBUGPROC>(messageCallback), userParam));
 }
@@ -526,14 +639,14 @@ void GLFunctions::glDebugMessageCallback(TglDebugProc messageCallback, void * us
 void GLFunctions::glDebugMessageControl(glConst source, glConst type, glConst severity, int32_t count,
                                         uint32_t const * ids, uint8_t enabled)
 {
-  ASSERT_EQUAL(CurrentApiVersion, dp::ApiVersion::OpenGLES3, ());
+  ASSERT_NOT_EQUAL(CurrentApiVersion, dp::ApiVersion::Invalid, ());
   ASSERT(glDebugMessageControlFn != nullptr, ());
   GLCHECK(glDebugMessageControlFn(source, type, severity, count, ids, enabled));
 }
 
 uint32_t GLFunctions::glGenVertexArray()
 {
-  ASSERT_EQUAL(CurrentApiVersion, dp::ApiVersion::OpenGLES3, ());
+  ASSERT_NOT_EQUAL(CurrentApiVersion, dp::ApiVersion::Invalid, ());
   ASSERT(glGenVertexArraysFn != nullptr, ());
   GLuint result = std::numeric_limits<GLuint>::max();
   GLCHECK(glGenVertexArraysFn(1, &result));
@@ -542,21 +655,21 @@ uint32_t GLFunctions::glGenVertexArray()
 
 void GLFunctions::glBindVertexArray(uint32_t vao)
 {
-  ASSERT_EQUAL(CurrentApiVersion, dp::ApiVersion::OpenGLES3, ());
+  ASSERT_NOT_EQUAL(CurrentApiVersion, dp::ApiVersion::Invalid, ());
   ASSERT(glBindVertexArrayFn != nullptr, ());
   GLCHECK(glBindVertexArrayFn(vao));
 }
 
 void GLFunctions::glDeleteVertexArray(uint32_t vao)
 {
-  ASSERT_EQUAL(CurrentApiVersion, dp::ApiVersion::OpenGLES3, ());
+  ASSERT_NOT_EQUAL(CurrentApiVersion, dp::ApiVersion::Invalid, ());
   ASSERT(glDeleteVertexArrayFn != nullptr, ());
   GLCHECK(glDeleteVertexArrayFn(1, &vao));
 }
 
 uint32_t GLFunctions::glGenBuffer()
 {
-  ASSERT_EQUAL(CurrentApiVersion, dp::ApiVersion::OpenGLES3, ());
+  ASSERT_NOT_EQUAL(CurrentApiVersion, dp::ApiVersion::Invalid, ());
   ASSERT(glGenBuffersFn != nullptr, ());
   GLuint result = std::numeric_limits<GLuint>::max();
   GLCHECK(glGenBuffersFn(1, &result));
@@ -565,7 +678,7 @@ uint32_t GLFunctions::glGenBuffer()
 
 void GLFunctions::glBindBuffer(uint32_t vbo, uint32_t target)
 {
-  ASSERT_EQUAL(CurrentApiVersion, dp::ApiVersion::OpenGLES3, ());
+  ASSERT_NOT_EQUAL(CurrentApiVersion, dp::ApiVersion::Invalid, ());
   ASSERT(glBindBufferFn != nullptr, ());
 #ifdef DEBUG
   std::lock_guard<std::mutex> guard(g_boundBuffersMutex);
@@ -576,7 +689,7 @@ void GLFunctions::glBindBuffer(uint32_t vbo, uint32_t target)
 
 void GLFunctions::glDeleteBuffer(uint32_t vbo)
 {
-  ASSERT_EQUAL(CurrentApiVersion, dp::ApiVersion::OpenGLES3, ());
+  ASSERT_NOT_EQUAL(CurrentApiVersion, dp::ApiVersion::Invalid, ());
   ASSERT(glDeleteBuffersFn != nullptr, ());
 #ifdef DEBUG
   std::lock_guard<std::mutex> guard(g_boundBuffersMutex);
@@ -588,21 +701,21 @@ void GLFunctions::glDeleteBuffer(uint32_t vbo)
 
 void GLFunctions::glBufferData(glConst target, uint32_t size, void const * data, glConst usage)
 {
-  ASSERT_EQUAL(CurrentApiVersion, dp::ApiVersion::OpenGLES3, ());
+  ASSERT_NOT_EQUAL(CurrentApiVersion, dp::ApiVersion::Invalid, ());
   ASSERT(glBufferDataFn != nullptr, ());
   GLCHECK(glBufferDataFn(target, size, data, usage));
 }
 
 void GLFunctions::glBufferSubData(glConst target, uint32_t size, void const * data, uint32_t offset)
 {
-  ASSERT_EQUAL(CurrentApiVersion, dp::ApiVersion::OpenGLES3, ());
+  ASSERT_NOT_EQUAL(CurrentApiVersion, dp::ApiVersion::Invalid, ());
   ASSERT(glBufferSubDataFn != nullptr, ());
   GLCHECK(glBufferSubDataFn(target, offset, size, data));
 }
 
 void * GLFunctions::glMapBuffer(glConst target, glConst access)
 {
-  ASSERT_EQUAL(CurrentApiVersion, dp::ApiVersion::OpenGLES3, ());
+  ASSERT_NOT_EQUAL(CurrentApiVersion, dp::ApiVersion::Invalid, ());
   ASSERT(glMapBufferFn != nullptr, ());
   void * result = glMapBufferFn(target, access);
   GLCHECKCALL();
@@ -611,7 +724,7 @@ void * GLFunctions::glMapBuffer(glConst target, glConst access)
 
 void GLFunctions::glUnmapBuffer(glConst target)
 {
-  ASSERT_EQUAL(CurrentApiVersion, dp::ApiVersion::OpenGLES3, ());
+  ASSERT_NOT_EQUAL(CurrentApiVersion, dp::ApiVersion::Invalid, ());
   ASSERT(glUnmapBufferFn != nullptr, ());
   VERIFY(glUnmapBufferFn(target) == GL_TRUE, ());
   GLCHECKCALL();
@@ -619,7 +732,7 @@ void GLFunctions::glUnmapBuffer(glConst target)
 
 void * GLFunctions::glMapBufferRange(glConst target, uint32_t offset, uint32_t length, glConst access)
 {
-  ASSERT_EQUAL(CurrentApiVersion, dp::ApiVersion::OpenGLES3, ());
+  ASSERT_NOT_EQUAL(CurrentApiVersion, dp::ApiVersion::Invalid, ());
   ASSERT(glMapBufferRangeFn != nullptr, ());
   void * result = glMapBufferRangeFn(target, offset, length, access);
   GLCHECKCALL();
@@ -628,14 +741,14 @@ void * GLFunctions::glMapBufferRange(glConst target, uint32_t offset, uint32_t l
 
 void GLFunctions::glFlushMappedBufferRange(glConst target, uint32_t offset, uint32_t length)
 {
-  ASSERT_EQUAL(CurrentApiVersion, dp::ApiVersion::OpenGLES3, ());
+  ASSERT_NOT_EQUAL(CurrentApiVersion, dp::ApiVersion::Invalid, ());
   ASSERT(glFlushMappedBufferRangeFn != nullptr, ());
   GLCHECK(glFlushMappedBufferRangeFn(target, offset, length));
 }
 
 uint32_t GLFunctions::glCreateShader(glConst type)
 {
-  ASSERT_EQUAL(CurrentApiVersion, dp::ApiVersion::OpenGLES3, ());
+  ASSERT_NOT_EQUAL(CurrentApiVersion, dp::ApiVersion::Invalid, ());
   ASSERT(glCreateShaderFn != nullptr, ());
   GLuint result = glCreateShaderFn(type);
   GLCHECKCALL();
@@ -644,7 +757,7 @@ uint32_t GLFunctions::glCreateShader(glConst type)
 
 void GLFunctions::glShaderSource(uint32_t shaderID, std::string const & src, std::string const & defines)
 {
-  ASSERT_EQUAL(CurrentApiVersion, dp::ApiVersion::OpenGLES3, ());
+  ASSERT_NOT_EQUAL(CurrentApiVersion, dp::ApiVersion::Invalid, ());
   ASSERT(glShaderSourceFn != nullptr, ());
 
   std::string fullSrc;
@@ -667,7 +780,7 @@ void GLFunctions::glShaderSource(uint32_t shaderID, std::string const & src, std
 
 bool GLFunctions::glCompileShader(uint32_t shaderID, std::string & errorLog)
 {
-  ASSERT_EQUAL(CurrentApiVersion, dp::ApiVersion::OpenGLES3, ());
+  ASSERT_NOT_EQUAL(CurrentApiVersion, dp::ApiVersion::Invalid, ());
   ASSERT(glCompileShaderFn != nullptr, ());
   ASSERT(glGetShaderivFn != nullptr, ());
   ASSERT(glGetShaderInfoLogFn != nullptr, ());
@@ -687,14 +800,14 @@ bool GLFunctions::glCompileShader(uint32_t shaderID, std::string & errorLog)
 
 void GLFunctions::glDeleteShader(uint32_t shaderID)
 {
-  ASSERT_EQUAL(CurrentApiVersion, dp::ApiVersion::OpenGLES3, ());
+  ASSERT_NOT_EQUAL(CurrentApiVersion, dp::ApiVersion::Invalid, ());
   ASSERT(glDeleteShaderFn != nullptr, ());
   GLCHECK(glDeleteBuffersFn(1, &shaderID));
 }
 
 uint32_t GLFunctions::glCreateProgram()
 {
-  ASSERT_EQUAL(CurrentApiVersion, dp::ApiVersion::OpenGLES3, ());
+  ASSERT_NOT_EQUAL(CurrentApiVersion, dp::ApiVersion::Invalid, ());
   ASSERT(glCreateProgramFn != nullptr, ());
   GLuint result = glCreateProgramFn();
   GLCHECKCALL();
@@ -703,21 +816,21 @@ uint32_t GLFunctions::glCreateProgram()
 
 void GLFunctions::glAttachShader(uint32_t programID, uint32_t shaderID)
 {
-  ASSERT_EQUAL(CurrentApiVersion, dp::ApiVersion::OpenGLES3, ());
+  ASSERT_NOT_EQUAL(CurrentApiVersion, dp::ApiVersion::Invalid, ());
   ASSERT(glAttachShaderFn != nullptr, ());
   GLCHECK(glAttachShaderFn(programID, shaderID));
 }
 
 void GLFunctions::glDetachShader(uint32_t programID, uint32_t shaderID)
 {
-  ASSERT_EQUAL(CurrentApiVersion, dp::ApiVersion::OpenGLES3, ());
+  ASSERT_NOT_EQUAL(CurrentApiVersion, dp::ApiVersion::Invalid, ());
   ASSERT(glDetachShaderFn != nullptr, ());
   GLCHECK(glDetachShaderFn(programID, shaderID));
 }
 
 bool GLFunctions::glLinkProgram(uint32_t programID, std::string & errorLog)
 {
-  ASSERT_EQUAL(CurrentApiVersion, dp::ApiVersion::OpenGLES3, ());
+  ASSERT_NOT_EQUAL(CurrentApiVersion, dp::ApiVersion::Invalid, ());
   ASSERT(glLinkProgramFn != nullptr, ());
   ASSERT(glGetProgramivFn != nullptr, ());
   ASSERT(glGetProgramInfoLogFn != nullptr, ());
@@ -738,21 +851,26 @@ bool GLFunctions::glLinkProgram(uint32_t programID, std::string & errorLog)
 
 void GLFunctions::glDeleteProgram(uint32_t programID)
 {
-  ASSERT_EQUAL(CurrentApiVersion, dp::ApiVersion::OpenGLES3, ());
+  ASSERT_NOT_EQUAL(CurrentApiVersion, dp::ApiVersion::Invalid, ());
   ASSERT(glDeleteProgramFn != nullptr, ());
+  if (s_stateCache.m_program == programID)
+    s_stateCache.m_program = StateCache::kUnknown;
   GLCHECK(glDeleteProgramFn(programID));
 }
 
 void GLFunctions::glUseProgram(uint32_t programID)
 {
-  ASSERT_EQUAL(CurrentApiVersion, dp::ApiVersion::OpenGLES3, ());
+  ASSERT_NOT_EQUAL(CurrentApiVersion, dp::ApiVersion::Invalid, ());
   ASSERT(glUseProgramFn != nullptr, ());
+  if (s_stateCache.m_program == programID)
+    return;
+  s_stateCache.m_program = programID;
   GLCHECK(glUseProgramFn(programID));
 }
 
 int8_t GLFunctions::glGetAttribLocation(uint32_t programID, std::string const & name)
 {
-  ASSERT_EQUAL(CurrentApiVersion, dp::ApiVersion::OpenGLES3, ());
+  ASSERT_NOT_EQUAL(CurrentApiVersion, dp::ApiVersion::Invalid, ());
   ASSERT(glGetAttribLocationFn != nullptr, ());
   int result = glGetAttribLocationFn(programID, name.c_str());
   GLCHECKCALL();
@@ -762,14 +880,14 @@ int8_t GLFunctions::glGetAttribLocation(uint32_t programID, std::string const & 
 
 void GLFunctions::glBindAttribLocation(uint32_t programID, uint8_t index, std::string const & name)
 {
-  ASSERT_EQUAL(CurrentApiVersion, dp::ApiVersion::OpenGLES3, ());
+  ASSERT_NOT_EQUAL(CurrentApiVersion, dp::ApiVersion::Invalid, ());
   ASSERT(glBindAttribLocationFn != nullptr, ());
   GLCHECK(glBindAttribLocationFn(programID, index, name.c_str()));
 }
 
 void GLFunctions::glEnableVertexAttribute(int attributeLocation)
 {
-  ASSERT_EQUAL(CurrentApiVersion, dp::ApiVersion::OpenGLES3, ());
+  ASSERT_NOT_EQUAL(CurrentApiVersion, dp::ApiVersion::Invalid, ());
   ASSERT(glEnableVertexAttributeFn != nullptr, ());
   GLCHECK(glEnableVertexAttributeFn(attributeLocation));
 }
@@ -777,7 +895,7 @@ void GLFunctions::glEnableVertexAttribute(int attributeLocation)
 void GLFunctions::glVertexAttributePointer(int attrLocation, uint32_t count, glConst type, bool needNormalize,
                                            uint32_t stride, uint32_t offset)
 {
-  ASSERT_EQUAL(CurrentApiVersion, dp::ApiVersion::OpenGLES3, ());
+  ASSERT_NOT_EQUAL(CurrentApiVersion, dp::ApiVersion::Invalid, ());
   ASSERT(glVertexAttributePointerFn != nullptr, ());
   GLCHECK(glVertexAttributePointerFn(attrLocation, count, type, convert(needNormalize), stride,
                                      reinterpret_cast<void *>(offset)));
@@ -786,7 +904,7 @@ void GLFunctions::glVertexAttributePointer(int attrLocation, uint32_t count, glC
 void GLFunctions::glGetActiveUniform(uint32_t programID, uint32_t uniformIndex, int32_t * uniformSize, glConst * type,
                                      std::string & name)
 {
-  ASSERT_EQUAL(CurrentApiVersion, dp::ApiVersion::OpenGLES3, ());
+  ASSERT_NOT_EQUAL(CurrentApiVersion, dp::ApiVersion::Invalid, ());
   ASSERT(glGetActiveUniformFn != nullptr, ());
   GLchar buff[256];
   GLCHECK(glGetActiveUniformFn(programID, uniformIndex, ARRAY_SIZE(buff), nullptr, uniformSize, type, buff));
@@ -795,7 +913,7 @@ void GLFunctions::glGetActiveUniform(uint32_t programID, uint32_t uniformIndex, 
 
 int8_t GLFunctions::glGetUniformLocation(uint32_t programID, std::string const & name)
 {
-  ASSERT_EQUAL(CurrentApiVersion, dp::ApiVersion::OpenGLES3, ());
+  ASSERT_NOT_EQUAL(CurrentApiVersion, dp::ApiVersion::Invalid, ());
   ASSERT(glGetUniformLocationFn != nullptr, ());
   int result = glGetUniformLocationFn(programID, name.c_str());
   GLCHECKCALL();
@@ -805,7 +923,7 @@ int8_t GLFunctions::glGetUniformLocation(uint32_t programID, std::string const &
 
 void GLFunctions::glUniformValuei(int8_t location, int32_t v)
 {
-  ASSERT_EQUAL(CurrentApiVersion, dp::ApiVersion::OpenGLES3, ());
+  ASSERT_NOT_EQUAL(CurrentApiVersion, dp::ApiVersion::Invalid, ());
   ASSERT(glUniform1iFn != nullptr, ());
   ASSERT(location != -1, ());
   GLCHECK(glUniform1iFn(location, v));
@@ -813,7 +931,7 @@ void GLFunctions::glUniformValuei(int8_t location, int32_t v)
 
 void GLFunctions::glUniformValuei(int8_t location, int32_t v1, int32_t v2)
 {
-  ASSERT_EQUAL(CurrentApiVersion, dp::ApiVersion::OpenGLES3, ());
+  ASSERT_NOT_EQUAL(CurrentApiVersion, dp::ApiVersion::Invalid, ());
   ASSERT(glUniform2iFn != nullptr, ());
   ASSERT(location != -1, ());
   GLCHECK(glUniform2iFn(location, v1, v2));
@@ -821,7 +939,7 @@ void GLFunctions::glUniformValuei(int8_t location, int32_t v1, int32_t v2)
 
 void GLFunctions::glUniformValuei(int8_t location, int32_t v1, int32_t v2, int32_t v3)
 {
-  ASSERT_EQUAL(CurrentApiVersion, dp::ApiVersion::OpenGLES3, ());
+  ASSERT_NOT_EQUAL(CurrentApiVersion, dp::ApiVersion::Invalid, ());
   ASSERT(glUniform3iFn != nullptr, ());
   ASSERT(location != -1, ());
   GLCHECK(glUniform3iFn(location, v1, v2, v3));
@@ -829,7 +947,7 @@ void GLFunctions::glUniformValuei(int8_t location, int32_t v1, int32_t v2, int32
 
 void GLFunctions::glUniformValuei(int8_t location, int32_t v1, int32_t v2, int32_t v3, int32_t v4)
 {
-  ASSERT_EQUAL(CurrentApiVersion, dp::ApiVersion::OpenGLES3, ());
+  ASSERT_NOT_EQUAL(CurrentApiVersion, dp::ApiVersion::Invalid, ());
   ASSERT(glUniform4iFn != nullptr, ());
   ASSERT(location != -1, ());
   GLCHECK(glUniform4iFn(location, v1, v2, v3, v4));
@@ -837,7 +955,7 @@ void GLFunctions::glUniformValuei(int8_t location, int32_t v1, int32_t v2, int32
 
 void GLFunctions::glUniformValueiv(int8_t location, int32_t * v, uint32_t size)
 {
-  ASSERT_EQUAL(CurrentApiVersion, dp::ApiVersion::OpenGLES3, ());
+  ASSERT_NOT_EQUAL(CurrentApiVersion, dp::ApiVersion::Invalid, ());
   ASSERT(glUniform1ivFn != nullptr, ());
   ASSERT(location != -1, ());
   GLCHECK(glUniform1ivFn(location, size, v));
@@ -845,7 +963,7 @@ void GLFunctions::glUniformValueiv(int8_t location, int32_t * v, uint32_t size)
 
 void GLFunctions::glUniformValuef(int8_t location, float v)
 {
-  ASSERT_EQUAL(CurrentApiVersion, dp::ApiVersion::OpenGLES3, ());
+  ASSERT_NOT_EQUAL(CurrentApiVersion, dp::ApiVersion::Invalid, ());
   ASSERT(glUniform1fFn != nullptr, ());
   ASSERT(location != -1, ());
   GLCHECK(glUniform1fFn(location, v));
@@ -853,7 +971,7 @@ void GLFunctions::glUniformValuef(int8_t location, float v)
 
 void GLFunctions::glUniformValuef(int8_t location, float v1, float v2)
 {
-  ASSERT_EQUAL(CurrentApiVersion, dp::ApiVersion::OpenGLES3, ());
+  ASSERT_NOT_EQUAL(CurrentApiVersion, dp::ApiVersion::Invalid, ());
   ASSERT(glUniform2fFn != nullptr, ());
   ASSERT(location != -1, ());
   GLCHECK(glUniform2fFn(location, v1, v2));
@@ -861,7 +979,7 @@ void GLFunctions::glUniformValuef(int8_t location, float v1, float v2)
 
 void GLFunctions::glUniformValuef(int8_t location, float v1, float v2, float v3)
 {
-  ASSERT_EQUAL(CurrentApiVersion, dp::ApiVersion::OpenGLES3, ());
+  ASSERT_NOT_EQUAL(CurrentApiVersion, dp::ApiVersion::Invalid, ());
   ASSERT(glUniform3fFn != nullptr, ());
   ASSERT(location != -1, ());
   GLCHECK(glUniform3fFn(location, v1, v2, v3));
@@ -869,7 +987,7 @@ void GLFunctions::glUniformValuef(int8_t location, float v1, float v2, float v3)
 
 void GLFunctions::glUniformValuef(int8_t location, float v1, float v2, float v3, float v4)
 {
-  ASSERT_EQUAL(CurrentApiVersion, dp::ApiVersion::OpenGLES3, ());
+  ASSERT_NOT_EQUAL(CurrentApiVersion, dp::ApiVersion::Invalid, ());
   ASSERT(glUniform4fFn != nullptr, ());
   ASSERT(location != -1, ());
   GLCHECK(glUniform4fFn(location, v1, v2, v3, v4));
@@ -877,7 +995,7 @@ void GLFunctions::glUniformValuef(int8_t location, float v1, float v2, float v3,
 
 void GLFunctions::glUniformValuefv(int8_t location, float * v, uint32_t size)
 {
-  ASSERT_EQUAL(CurrentApiVersion, dp::ApiVersion::OpenGLES3, ());
+  ASSERT_NOT_EQUAL(CurrentApiVersion, dp::ApiVersion::Invalid, ());
   ASSERT(glUniform1fvFn != nullptr, ());
   ASSERT(location != -1, ());
   GLCHECK(glUniform1fvFn(location, size, v));
@@ -885,7 +1003,7 @@ void GLFunctions::glUniformValuefv(int8_t location, float * v, uint32_t size)
 
 void GLFunctions::glUniformMatrix4x4Value(int8_t location, float const * values)
 {
-  ASSERT_EQUAL(CurrentApiVersion, dp::ApiVersion::OpenGLES3, ());
+  ASSERT_NOT_EQUAL(CurrentApiVersion, dp::ApiVersion::Invalid, ());
   ASSERT(glUniformMatrix4fvFn != nullptr, ());
   ASSERT(location != -1, ());
   GLCHECK(glUniformMatrix4fvFn(location, 1, GL_FALSE, values));
@@ -893,7 +1011,7 @@ void GLFunctions::glUniformMatrix4x4Value(int8_t location, float const * values)
 
 uint32_t GLFunctions::glGetCurrentProgram()
 {
-  ASSERT_EQUAL(CurrentApiVersion, dp::ApiVersion::OpenGLES3, ());
+  ASSERT_NOT_EQUAL(CurrentApiVersion, dp::ApiVersion::Invalid, ());
   GLint programIndex = 0;
   GLCHECK(glGetIntegerv(GL_CURRENT_PROGRAM, &programIndex));
   ASSERT_GREATER_OR_EQUAL(programIndex, 0, ());
@@ -902,7 +1020,7 @@ uint32_t GLFunctions::glGetCurrentProgram()
 
 int32_t GLFunctions::glGetProgramiv(uint32_t program, glConst paramName)
 {
-  ASSERT_EQUAL(CurrentApiVersion, dp::ApiVersion::OpenGLES3, ());
+  ASSERT_NOT_EQUAL(CurrentApiVersion, dp::ApiVersion::Invalid, ());
   ASSERT(glGetProgramivFn != nullptr, ());
   GLint paramValue = 0;
   GLCHECK(glGetProgramivFn(program, paramName, &paramValue));
@@ -911,14 +1029,14 @@ int32_t GLFunctions::glGetProgramiv(uint32_t program, glConst paramName)
 
 void GLFunctions::glActiveTexture(glConst texBlock)
 {
-  ASSERT_EQUAL(CurrentApiVersion, dp::ApiVersion::OpenGLES3, ());
+  ASSERT_NOT_EQUAL(CurrentApiVersion, dp::ApiVersion::Invalid, ());
   ASSERT(glActiveTextureFn != nullptr, ());
   GLCHECK(glActiveTextureFn(texBlock));
 }
 
 uint32_t GLFunctions::glGenTexture()
 {
-  ASSERT_EQUAL(CurrentApiVersion, dp::ApiVersion::OpenGLES3, ());
+  ASSERT_NOT_EQUAL(CurrentApiVersion, dp::ApiVersion::Invalid, ());
   GLuint result = std::numeric_limits<GLuint>::max();
   GLCHECK(::glGenTextures(1, &result));
   return result;
@@ -926,19 +1044,19 @@ uint32_t GLFunctions::glGenTexture()
 
 void GLFunctions::glDeleteTexture(uint32_t id)
 {
-  ASSERT_EQUAL(CurrentApiVersion, dp::ApiVersion::OpenGLES3, ());
+  ASSERT_NOT_EQUAL(CurrentApiVersion, dp::ApiVersion::Invalid, ());
   GLCHECK(::glDeleteTextures(1, &id));
 }
 
 void GLFunctions::glBindTexture(uint32_t textureID)
 {
-  ASSERT_EQUAL(CurrentApiVersion, dp::ApiVersion::OpenGLES3, ());
+  ASSERT_NOT_EQUAL(CurrentApiVersion, dp::ApiVersion::Invalid, ());
   GLCHECK(::glBindTexture(GL_TEXTURE_2D, textureID));
 }
 
 void GLFunctions::glTexImage2D(int width, int height, glConst layout, glConst pixelType, void const * data)
 {
-  ASSERT_EQUAL(CurrentApiVersion, dp::ApiVersion::OpenGLES3, ());
+  ASSERT_NOT_EQUAL(CurrentApiVersion, dp::ApiVersion::Invalid, ());
   // In OpenGL ES3:
   // - we can't create unsized GL_RED texture, so we use GL_R8;
   // - we can't create unsized GL_RG texture, so we use GL_RG8;
@@ -976,69 +1094,81 @@ void GLFunctions::glTexImage2D(int width, int height, glConst layout, glConst pi
 void GLFunctions::glTexSubImage2D(int x, int y, int width, int height, glConst layout, glConst pixelType,
                                   void const * data)
 {
-  ASSERT_EQUAL(CurrentApiVersion, dp::ApiVersion::OpenGLES3, ());
+  ASSERT_NOT_EQUAL(CurrentApiVersion, dp::ApiVersion::Invalid, ());
   GLCHECK(::glTexSubImage2D(GL_TEXTURE_2D, 0, x, y, width, height, layout, pixelType, data));
 }
 
 void GLFunctions::glTexParameter(glConst param, glConst value)
 {
-  ASSERT_EQUAL(CurrentApiVersion, dp::ApiVersion::OpenGLES3, ());
+  ASSERT_NOT_EQUAL(CurrentApiVersion, dp::ApiVersion::Invalid, ());
   GLCHECK(::glTexParameteri(GL_TEXTURE_2D, param, value));
 }
 
 void GLFunctions::glDrawElements(glConst primitive, uint32_t sizeOfIndex, uint32_t indexCount, uint32_t startIndex)
 {
-  ASSERT_EQUAL(CurrentApiVersion, dp::ApiVersion::OpenGLES3, ());
+  ASSERT_NOT_EQUAL(CurrentApiVersion, dp::ApiVersion::Invalid, ());
   GLCHECK(::glDrawElements(primitive, indexCount, sizeOfIndex == sizeof(uint32_t) ? GL_UNSIGNED_INT : GL_UNSIGNED_SHORT,
                            reinterpret_cast<GLvoid *>(startIndex * sizeOfIndex)));
 }
 
 void GLFunctions::glDrawArrays(glConst mode, int32_t first, uint32_t count)
 {
-  ASSERT_EQUAL(CurrentApiVersion, dp::ApiVersion::OpenGLES3, ());
+  ASSERT_NOT_EQUAL(CurrentApiVersion, dp::ApiVersion::Invalid, ());
   GLCHECK(::glDrawArrays(mode, first, count));
 }
 
 void GLFunctions::glGenFramebuffer(uint32_t * fbo)
 {
-  ASSERT_EQUAL(CurrentApiVersion, dp::ApiVersion::OpenGLES3, ());
+  ASSERT_NOT_EQUAL(CurrentApiVersion, dp::ApiVersion::Invalid, ());
   ASSERT(glGenFramebuffersFn != nullptr, ());
   GLCHECK(glGenFramebuffersFn(1, fbo));
 }
 
 void GLFunctions::glDeleteFramebuffer(uint32_t * fbo)
 {
-  ASSERT_EQUAL(CurrentApiVersion, dp::ApiVersion::OpenGLES3, ());
+  ASSERT_NOT_EQUAL(CurrentApiVersion, dp::ApiVersion::Invalid, ());
   ASSERT(glDeleteFramebuffersFn != nullptr, ());
   GLCHECK(glDeleteFramebuffersFn(1, fbo));
 }
 
 void GLFunctions::glFramebufferTexture2D(glConst attachment, glConst texture)
 {
-  ASSERT_EQUAL(CurrentApiVersion, dp::ApiVersion::OpenGLES3, ());
+  ASSERT_NOT_EQUAL(CurrentApiVersion, dp::ApiVersion::Invalid, ());
   ASSERT(glFramebufferTexture2DFn != nullptr, ());
   GLCHECK(glFramebufferTexture2DFn(GL_FRAMEBUFFER, attachment, GL_TEXTURE_2D, texture, 0));
 }
 
 void GLFunctions::glBindFramebuffer(uint32_t fbo)
 {
-  ASSERT_EQUAL(CurrentApiVersion, dp::ApiVersion::OpenGLES3, ());
+  ASSERT_NOT_EQUAL(CurrentApiVersion, dp::ApiVersion::Invalid, ());
   ASSERT(glBindFramebufferFn != nullptr, ());
   GLCHECK(glBindFramebufferFn(GL_FRAMEBUFFER, fbo));
 }
 
 uint32_t GLFunctions::glCheckFramebufferStatus()
 {
-  ASSERT_EQUAL(CurrentApiVersion, dp::ApiVersion::OpenGLES3, ());
+  ASSERT_NOT_EQUAL(CurrentApiVersion, dp::ApiVersion::Invalid, ());
   ASSERT(glCheckFramebufferStatusFn != nullptr, ());
   uint32_t const result = glCheckFramebufferStatusFn(GL_FRAMEBUFFER);
   GLCHECKCALL();
   return result;
 }
 
+void GLFunctions::glDiscardDepthStencil(bool isDefaultFramebuffer)
+{
+  ASSERT_NOT_EQUAL(CurrentApiVersion, dp::ApiVersion::Invalid, ());
+  if (glDiscardFramebufferFn == nullptr)
+    return;
+
+  // Values from GL_EXT_discard_framebuffer.
+  GLenum const kDefaultAttachments[] = {0x1801 /* GL_DEPTH_EXT */, 0x1802 /* GL_STENCIL_EXT */};
+  GLenum const kFboAttachments[] = {GL_DEPTH_ATTACHMENT, GL_STENCIL_ATTACHMENT};
+  GLCHECK(glDiscardFramebufferFn(GL_FRAMEBUFFER, 2, isDefaultFramebuffer ? kDefaultAttachments : kFboAttachments));
+}
+
 void GLFunctions::glLineWidth(uint32_t value)
 {
-  ASSERT_EQUAL(CurrentApiVersion, dp::ApiVersion::OpenGLES3, ());
+  ASSERT_NOT_EQUAL(CurrentApiVersion, dp::ApiVersion::Invalid, ());
   GLCHECK(::glLineWidth(static_cast<float>(value)));
 }
 
@@ -1059,7 +1189,7 @@ std::string GetGLError(GLenum error)
 
 void CheckGLError(base::SrcPoint const & srcPoint)
 {
-  ASSERT_EQUAL(GLFunctions::CurrentApiVersion, dp::ApiVersion::OpenGLES3, ());
+  ASSERT_NOT_EQUAL(GLFunctions::CurrentApiVersion, dp::ApiVersion::Invalid, ());
   GLenum result = glGetError();
   while (result != GL_NO_ERROR)
   {

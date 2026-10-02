@@ -47,9 +47,15 @@ MapWidget::MapWidget(Framework & framework, bool isScreenshotMode, QWidget * par
   , m_contextFactory(nullptr)
 {
   setMouseTracking(true);
-  // Update widget's content frequency is 60 fps.
+  // Check for new frames 60 times per second. Repaint only when the renderer has produced
+  // a new frame: an idle map costs no GPU time (blit + swap), which matters on slow devices.
   m_updateTimer = std::make_unique<QTimer>(this);
-  VERIFY(connect(m_updateTimer.get(), SIGNAL(timeout()), this, SLOT(update())), ());
+  auto const updateIfNewFrame = [this]()
+  {
+    if (m_contextFactory == nullptr || m_contextFactory->HasNewFrame())
+      update();
+  };
+  VERIFY(connect(m_updateTimer.get(), &QTimer::timeout, this, updateIfNewFrame), ());
   m_updateTimer->setSingleShot(false);
   m_updateTimer->start(1000 / 60);
   setAttribute(Qt::WA_AcceptTouchEvents);
@@ -109,7 +115,7 @@ void MapWidget::CreateEngine()
 {
   Framework::DrapeCreationParams p;
 
-  p.m_apiVersion = dp::ApiVersion::OpenGLES3;
+  p.m_apiVersion = m_apiOpenGLES3 ? dp::ApiVersion::OpenGLES3 : dp::ApiVersion::OpenGLES2;
 
   p.m_surfaceWidth = m_screenshotMode ? width() : static_cast<int>(m_ratio * width());
   p.m_surfaceHeight = m_screenshotMode ? height() : static_cast<int>(m_ratio * height());
@@ -275,13 +281,21 @@ void MapWidget::Build()
 {
   std::string_view vertexSrc;
   std::string_view fragmentSrc;
+  if (!m_apiOpenGLES3)
+  {
+    vertexSrc = ":common/shaders/gles_200.vsh.glsl";
+    fragmentSrc = ":common/shaders/gles_200.fsh.glsl";
+  }
+  else
+  {
 #if defined(OMIM_OS_LINUX)
-  vertexSrc = ":common/shaders/gles_300.vsh.glsl";
-  fragmentSrc = ":common/shaders/gles_300.fsh.glsl";
+    vertexSrc = ":common/shaders/gles_300.vsh.glsl";
+    fragmentSrc = ":common/shaders/gles_300.fsh.glsl";
 #else
-  vertexSrc = ":common/shaders/gl_150.vsh.glsl";
-  fragmentSrc = ":common/shaders/gl_150.fsh.glsl";
+    vertexSrc = ":common/shaders/gl_150.vsh.glsl";
+    fragmentSrc = ":common/shaders/gl_150.fsh.glsl";
 #endif
+  }
 
   m_program = std::make_unique<QOpenGLShaderProgram>(this);
   m_program->addShaderFromSourceFile(QOpenGLShader::Vertex, vertexSrc.data());
@@ -394,13 +408,16 @@ void MapWidget::initializeGL()
       LOG(LCRITICAL, ("Context is not LibGLES! This shouldn't have happened."));
 
     auto fmt = context()->format();
-    if (context()->format().version() < qMakePair(3, 0))
+    if (GetOpenGLApiVersion(*context()) == dp::ApiVersion::OpenGLES2)
     {
-      CHECK(false, ("OpenGL ES2 is not supported"));
+      LOG(LINFO, ("Using the OpenGL ES 2.0 renderer, GLSL '#version 100'"));
+      m_apiOpenGLES3 = false;
+      fmt.setVersion(2, 0);
     }
     else
     {
       LOG(LINFO, ("OpenGL version is at least 3.0, enabling GLSL '#version 300 es'"));
+      m_apiOpenGLES3 = true;
       fmt.setVersion(3, 0);
     }
 

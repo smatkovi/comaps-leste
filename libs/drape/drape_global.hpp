@@ -30,8 +30,15 @@ enum class ApiVersion
   Invalid = -1,
   OpenGLES3,
   Metal,
-  Vulkan
+  Vulkan,
+  // Legacy OpenGL ES 2.0 path for old GPUs (e.g. PowerVR SGX5xx).
+  OpenGLES2
 };
+
+inline bool IsOpenGLApi(ApiVersion apiVersion)
+{
+  return apiVersion == ApiVersion::OpenGLES3 || apiVersion == ApiVersion::OpenGLES2;
+}
 
 /// @todo We have in code: if (anchor & dp::Center) which is not consistent with Center == 0.
 /// Making Center == 1 breaks other defaults. Review this logic in future.
@@ -107,6 +114,7 @@ inline std::string DebugPrint(dp::ApiVersion apiVersion)
   {
   case dp::ApiVersion::Invalid: return "Invalid";
   case dp::ApiVersion::OpenGLES3: return "OpenGLES3";
+  case dp::ApiVersion::OpenGLES2: return "OpenGLES2";
   case dp::ApiVersion::Metal: return "Metal";
   case dp::ApiVersion::Vulkan: return "Vulkan";
   }
@@ -127,6 +135,9 @@ inline dp::ApiVersion ApiVersionFromString(std::string const & str)
 
   if (str == "OpenGLES3")
     return dp::ApiVersion::OpenGLES3;
+
+  if (str == "OpenGLES2")
+    return dp::ApiVersion::OpenGLES2;
 
   // Default behavior for different OS. Appropriate fallback will be chosen
   // if default API is not supported.

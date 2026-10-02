@@ -20,6 +20,8 @@ public:
   void PrepareToShutdown();
 
   bool AcquireFrame();
+  // Returns true if the draw context has rendered a frame which has not been shown yet.
+  bool HasNewFrame();
   GLuint GetTextureHandle() const;
   QRectF const & GetTexRect() const;
   QSize GetTextureSize() const;

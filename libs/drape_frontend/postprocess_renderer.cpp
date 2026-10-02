@@ -194,6 +194,10 @@ bool PostprocessRenderer::IsEnabled() const
 
 void PostprocessRenderer::SetEffectEnabled(ref_ptr<dp::GraphicsContext> context, Effect effect, bool enabled)
 {
+  // Do not support AA for OpenGL ES 2.0.
+  if (m_apiVersion == dp::ApiVersion::OpenGLES2 && effect == Effect::Antialiasing)
+    return;
+
   auto const oldValue = m_effects;
   auto const effectMask = static_cast<uint32_t>(effect);
   m_effects = (m_effects & ~effectMask) | (enabled ? effectMask : 0);
@@ -392,6 +396,13 @@ void PostprocessRenderer::UpdateFramebuffers(ref_ptr<dp::GraphicsContext> contex
   ASSERT_NOT_EQUAL(height, 0, ());
 
   CHECK_EQUAL(m_apiVersion, context->GetApiVersion(), ());
+
+  // OpenGL ES 2.0 GPUs are slow: render directly to the default framebuffer instead of rendering
+  // to an offscreen texture and compositing it with an extra full-screen pass. No postprocessing
+  // effects are supported on ES 2.0 anyway.
+  if (m_apiVersion == dp::ApiVersion::OpenGLES2)
+    return;
+
   InitFramebuffer(context, m_mainFramebuffer, width, height, true /* depthEnabled */, true /* stencilEnabled */);
   m_isMainFramebufferRendered = false;
 

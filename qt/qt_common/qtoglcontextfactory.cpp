@@ -36,6 +36,14 @@ bool QtOGLContextFactory::AcquireFrame()
   return m_drawContext->AcquireFrame();
 }
 
+bool QtOGLContextFactory::HasNewFrame()
+{
+  if (m_preparedToShutdown || !m_drawContext)
+    return false;
+
+  return m_drawContext->HasNewFrame();
+}
+
 QRectF const & QtOGLContextFactory::GetTexRect() const
 {
   ASSERT(m_drawContext != nullptr, ());
