@@ -17,6 +17,20 @@ namespace
 {
 double g_pinchSpeed = 2.0;
 double g_scrollSpeed = 2.0;
+// COMAPS_TOUCH_DEBUG: every touch event and what drape gets, to stderr
+bool const g_touchDebug = qEnvironmentVariableIsSet("COMAPS_TOUCH_DEBUG");
+
+char const * TouchTypeName(df::TouchEvent::ETouchType type)
+{
+  switch (type)
+  {
+  case df::TouchEvent::TOUCH_DOWN: return "down";
+  case df::TouchEvent::TOUCH_MOVE: return "move";
+  case df::TouchEvent::TOUCH_UP: return "up";
+  case df::TouchEvent::TOUCH_CANCEL: return "cancel";
+  default: return "none";
+  }
+}
 
 df::TouchEvent::ETouchType ToDfTouchType(QEvent::Type type)
 {
@@ -248,6 +262,13 @@ void MapView::touchEvent(QTouchEvent * event)
 {
   auto const type = ToDfTouchType(event->type());
   auto const & points = event->points();
+  if (g_touchDebug)
+  {
+    QString line;
+    for (auto const & p : points)
+      line += QString(" %1:%2(%3,%4)").arg(p.id()).arg(int(p.state())).arg(p.position().x(), 0, 'f', 0).arg(p.position().y(), 0, 'f', 0);
+    qInfo("touch qt=%d%s", int(event->type()), qPrintable(line));
+  }
   if (!m_interactive || !active() || type == df::TouchEvent::TOUCH_NONE || points.isEmpty())
   {
     event->ignore();
@@ -333,6 +354,9 @@ void MapView::SendTouches(df::TouchEvent::ETouchType type, m2::PointD const * lo
     m_lastLocations[i] = locations[i];
   }
   m_lastCount = count;
+  if (g_touchDebug)
+    qInfo("  drape %s %d: (%.0f,%.0f) (%.0f,%.0f)", TouchTypeName(type), count, locations[0].x, locations[0].y,
+          count > 1 ? locations[1].x : 0.0, count > 1 ? locations[1].y : 0.0);
   MapEngine::Instance().GetFramework().TouchEvent(touchEvent);
 }
 
