@@ -33,7 +33,8 @@ enum TLocationSource
   ETizen,  // Deprecated but left here for backward compatibility.
   EGeoClue2,
   EPredictor,
-  EUser
+  EUser,
+  EGpsd
 };
 
 /// Our structure ALWAYS has valid lat, lon and horizontal accuracy.

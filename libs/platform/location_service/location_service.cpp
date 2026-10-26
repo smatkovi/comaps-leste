@@ -9,6 +9,8 @@
 #if defined(OMIM_OS_MAC)
 std::unique_ptr<location::LocationService> CreateAppleLocationService(location::LocationObserver &);
 #elif defined(QT_LOCATION_SERVICE)
+#include "platform/location_service/gpsd_location_service.hpp"
+
 std::unique_ptr<location::LocationService> CreateQtLocationService(location::LocationObserver &,
                                                                    std::string const & sourceName);
 #endif
@@ -73,7 +75,9 @@ public:
   {
 #if defined(QT_LOCATION_SERVICE)
 #if defined(OMIM_OS_LINUX)
-    m_services.push_back(CreateQtLocationService(*this, "geoclue2"));
+    // gpsd where it runs (phones feeding their GNSS to it), geoclue2 otherwise
+    m_services.push_back(CreateGpsdLocationService(
+        *this, [](LocationObserver & observer) { return CreateQtLocationService(observer, "geoclue2"); }));
 #endif                                 // OMIM_OS_LINUX
 #elif defined(APPLE_LOCATION_SERVICE)  // No QT_LOCATION_SERVICE
     m_services.push_back(CreateAppleLocationService(*this));

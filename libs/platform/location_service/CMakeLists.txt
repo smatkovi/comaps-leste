@@ -1,8 +1,10 @@
 project(location_service)
 
-find_package(Qt6 REQUIRED COMPONENTS Positioning)
+find_package(Qt6 REQUIRED COMPONENTS Network Positioning)
 
 set(SRC
+  gpsd_location_service.cpp
+  gpsd_location_service.hpp
   location_service.cpp
   location_service.hpp
   qt_location_service.hpp
@@ -14,6 +16,7 @@ omim_add_library(${PROJECT_NAME} ${SRC})
 target_link_libraries(${PROJECT_NAME}
   PUBLIC
     platform
+    Qt6::Network
     Qt6::Positioning
   PRIVATE
     base
