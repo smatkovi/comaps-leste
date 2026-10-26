@@ -198,7 +198,10 @@ bool MapView::eventFilter(QObject * watched, QEvent * event)
   case QEvent::Expose:
   case QEvent::Show:
   case QEvent::Hide:
-  case QEvent::DevicePixelRatioChange: ScheduleReevaluate(); break;
+#if QT_VERSION >= QT_VERSION_CHECK(6, 6, 0)
+  case QEvent::DevicePixelRatioChange:
+#endif
+    ScheduleReevaluate(); break;
   default: break;
   }
   return QQuickItem::eventFilter(watched, event);
