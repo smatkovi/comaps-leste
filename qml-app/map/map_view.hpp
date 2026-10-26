@@ -69,7 +69,9 @@ private:
   void ScheduleReevaluate();
   void UpdateInputFlags();
   void SendMouse(QMouseEvent * event, int type);
-  void SendTouches(df::TouchEvent::ETouchType type, m2::PointD const * locations, int count);
+  void SendTouches(df::TouchEvent::ETouchType type, m2::PointD const * locations, int const * ids, int count);
+  void StartTouchPhase(m2::PointD const * real, m2::PointD const * sent);
+  m2::PointD LastSent(int id, m2::PointD const & otherwise) const;
 
   QPointer<QQuickWindow> m_window;
   // The window the scene is shown in when it is rendered offscreen (inside a QQuickWidget).
@@ -81,13 +83,18 @@ private:
   bool m_primary = false;
   bool m_interactive = true;
   bool m_reevaluatePending = false;
-  int m_pinchIds[2] = {-1, -1};
-  double m_pinchStartDistance = 0.0;
-  m2::PointD m_pinchCenter;
-  int m_scrollId = -1;
-  m2::PointD m_scrollOrigin;
+  // The (at most two) fingers drape follows, by Qt's point id, in the order drape got them.
+  int m_fingerIds[2] = {-1, -1};
+  int m_fingerCount = 0;
+  // Where the current phase (the same fingers since the last one came or went) started: the fingers'
+  // real positions and the positions drape got, which differ once a movement was amplified.
+  int m_phaseIds[2] = {-1, -1};
+  int m_phaseCount = 0;
+  m2::PointD m_phaseReal[2];
+  m2::PointD m_phaseSent[2];
   bool m_touchOpen = false;
   m2::PointD m_lastLocations[2];
+  int m_lastIds[2] = {-1, -1};
   int m_lastCount = 0;
   GLuint m_textureId = 0;
   QSize m_textureSize;

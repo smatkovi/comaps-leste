@@ -260,8 +260,12 @@ QSGNode * MapView::updatePaintNode(QSGNode * oldNode, UpdatePaintNodeData *)
 
 void MapView::touchEvent(QTouchEvent * event)
 {
-  auto const type = ToDfTouchType(event->type());
   auto const & points = event->points();
+  if (!m_interactive || !active() || ToDfTouchType(event->type()) == df::TouchEvent::TOUCH_NONE || points.isEmpty())
+  {
+    event->ignore();
+    return;
+  }
   if (g_touchDebug)
   {
     QString line;
@@ -269,110 +273,204 @@ void MapView::touchEvent(QTouchEvent * event)
       line += QString(" %1:%2(%3,%4)").arg(p.id()).arg(int(p.state())).arg(p.position().x(), 0, 'f', 0).arg(p.position().y(), 0, 'f', 0);
     qInfo("touch qt=%d%s", int(event->type()), qPrintable(line));
   }
-  if (!m_interactive || !active() || type == df::TouchEvent::TOUCH_NONE || points.isEmpty())
+
+  // Drape follows two fingers by their ids: Qt keeps neither the order of the points (on X11 a new finger
+  // comes first) nor their number (a third finger is ignored here). A finger that comes is a down and one
+  // that goes an up, as on Android, so drape switches between tap, drag and scale on the change of fingers.
+  double const ratio = Ratio();
+  auto const pointOf = [&points](int id) -> QEventPoint const * {
+    for (auto const & p : points)
+      if (p.id() == id)
+        return &p;
+    return nullptr;
+  };
+  auto const realOf = [ratio](QEventPoint const & p) {
+    return m2::PointD(p.position().x() * ratio, p.position().y() * ratio);
+  };
+  m2::PointD real[2], sent[2];
+
+  if (event->type() == QEvent::TouchCancel)
   {
-    event->ignore();
+    if (m_fingerCount > 0)
+    {
+      for (int i = 0; i < m_fingerCount; ++i)
+        sent[i] = LastSent(m_fingerIds[i], m2::PointD());
+      SendTouches(df::TouchEvent::TOUCH_CANCEL, sent, m_fingerIds, m_fingerCount);
+    }
+    m_fingerCount = 0;
+    m_phaseCount = 0;
+    m_touchOpen = false;
+    event->accept();
     return;
   }
 
-  double const ratio = Ratio();
-  m2::PointD locations[2];
-  qsizetype const count = std::min<qsizetype>(points.size(), 2);
-  for (qsizetype i = 0; i < count; ++i)
-    locations[i] = m2::PointD(points[i].position().x() * ratio, points[i].position().y() * ratio);
-
-  bool const fingerDown = std::any_of(points.begin(), points.end(),
-                                      [](QEventPoint const & p) { return p.state() == QEventPoint::Pressed; });
-  if (fingerDown)
-    m_pinchStartDistance = 0.0;
-
-  if (count == 2)
+  // Fingers lifted: an up with all fingers where drape last saw them, then the rest go on.
+  bool lifted = false;
+  for (int i = 0; i < m_fingerCount; ++i)
   {
-    m_scrollId = -1;
-    double const distance = locations[0].Length(locations[1]);
-    if (points[0].id() != m_pinchIds[0] || points[1].id() != m_pinchIds[1] || m_pinchStartDistance <= 0.0)
+    QEventPoint const * p = pointOf(m_fingerIds[i]);
+    lifted = lifted || event->type() == QEvent::TouchEnd || (p && p->state() == QEventPoint::Released);
+  }
+  if (lifted)
+  {
+    for (int i = 0; i < m_fingerCount; ++i)
+      sent[i] = LastSent(m_fingerIds[i], pointOf(m_fingerIds[i]) ? realOf(*pointOf(m_fingerIds[i])) : m2::PointD());
+    SendTouches(df::TouchEvent::TOUCH_UP, sent, m_fingerIds, m_fingerCount);
+    int kept = 0;
+    for (int i = 0; i < m_fingerCount; ++i)
     {
-      m_pinchIds[0] = points[0].id();
-      m_pinchIds[1] = points[1].id();
-      m_pinchStartDistance = distance;
-      m_pinchCenter = (locations[0] + locations[1]) * 0.5;
+      QEventPoint const * p = pointOf(m_fingerIds[i]);
+      bool const gone = event->type() == QEvent::TouchEnd || (p && p->state() == QEventPoint::Released);
+      if (!gone)
+        m_fingerIds[kept++] = m_fingerIds[i];
     }
-    else if (distance > 0.0)
+    m_fingerCount = kept;
+    m_phaseCount = 0;
+  }
+
+  // Fingers put down: a down with the new ones where they are and the others where drape last saw them.
+  bool added = false;
+  for (auto const & p : points)
+  {
+    if (p.state() != QEventPoint::Pressed || m_fingerCount == 2)
+      continue;
+    if (std::find(m_fingerIds, m_fingerIds + m_fingerCount, p.id()) != m_fingerIds + m_fingerCount)
+      continue;
+    m_fingerIds[m_fingerCount++] = p.id();
+    added = true;
+  }
+  if (added)
+  {
+    for (int i = 0; i < m_fingerCount; ++i)
+    {
+      QEventPoint const * p = pointOf(m_fingerIds[i]);
+      real[i] = p ? realOf(*p) : LastSent(m_fingerIds[i], m2::PointD());
+      sent[i] = LastSent(m_fingerIds[i], real[i]);
+    }
+    SendTouches(df::TouchEvent::TOUCH_DOWN, sent, m_fingerIds, m_fingerCount);
+    StartTouchPhase(real, sent);
+  }
+
+  if (!lifted && !added && m_fingerCount > 0)
+  {
+    for (int i = 0; i < m_fingerCount; ++i)
+    {
+      QEventPoint const * p = pointOf(m_fingerIds[i]);
+      real[i] = p ? realOf(*p) : LastSent(m_fingerIds[i], m2::PointD());
+    }
+    bool const samePhase = m_phaseCount == m_fingerCount && m_phaseIds[0] == m_fingerIds[0] &&
+                           (m_fingerCount < 2 || m_phaseIds[1] == m_fingerIds[1]);
+    if (!samePhase)
+    {
+      // The first movement after a finger went: go on from where drape last saw the others.
+      for (int i = 0; i < m_fingerCount; ++i)
+        sent[i] = LastSent(m_fingerIds[i], real[i]);
+      StartTouchPhase(real, sent);
+    }
+    else if (m_fingerCount == 2)
     {
       // Zoom around the point where the pinch started: drifting fingers would pan the map, and in
-      // perspective a small drift near the horizon moves the camera far away.
-      double const amplified = m_pinchStartDistance * std::pow(distance / m_pinchStartDistance, g_pinchSpeed);
-      m2::PointD const direction = (locations[1] - locations[0]) * (0.5 * amplified / distance);
-      locations[0] = m_pinchCenter - direction;
-      locations[1] = m_pinchCenter + direction;
+      // perspective a small drift near the horizon moves the camera far away. The fingers' distance
+      // changes by its own ratio to the power of the pinch speed, the direction turns with the fingers.
+      m2::PointD const realStart = m_phaseReal[1] - m_phaseReal[0];
+      m2::PointD const realNow = real[1] - real[0];
+      m2::PointD const sentStart = m_phaseSent[1] - m_phaseSent[0];
+      double const startLength = realStart.Length();
+      double const nowLength = realNow.Length();
+      double const sentLength = sentStart.Length();
+      if (startLength > 0.0 && nowLength > 0.0 && sentLength > 0.0)
+      {
+        double const amplified = sentLength * std::pow(nowLength / startLength, g_pinchSpeed);
+        double const turn = std::atan2(realNow.y, realNow.x) - std::atan2(realStart.y, realStart.x);
+        double const c = std::cos(turn), s = std::sin(turn);
+        m2::PointD const unit = sentStart * (1.0 / sentLength);
+        m2::PointD const half = m2::PointD(unit.x * c - unit.y * s, unit.x * s + unit.y * c) * (0.5 * amplified);
+        m2::PointD const center = (m_phaseSent[0] + m_phaseSent[1]) * 0.5;
+        sent[0] = center - half;
+        sent[1] = center + half;
+      }
+      else
+      {
+        sent[0] = LastSent(m_fingerIds[0], real[0]);
+        sent[1] = LastSent(m_fingerIds[1], real[1]);
+      }
     }
-  }
-  else
-  {
-    m_pinchStartDistance = 0.0;
-    // One finger: amplify the movement beyond drape's drag threshold, so taps and the start of a drag
-    // are detected exactly as without amplification.
-    if (points[0].id() != m_scrollId)
+    else
     {
-      m_scrollId = points[0].id();
-      m_scrollOrigin = locations[0];
+      // One finger: amplify the movement beyond drape's drag threshold, so taps and the start of a drag
+      // are detected exactly as without amplification.
+      m2::PointD const offset = real[0] - m_phaseReal[0];
+      double const distance = offset.Length();
+      double const threshold = df::VisualParams::Instance().GetDragThreshold();
+      sent[0] = m_phaseSent[0] +
+                (distance > threshold ? offset * ((threshold + (distance - threshold) * g_scrollSpeed) / distance)
+                                      : offset);
     }
-    m2::PointD const offset = locations[0] - m_scrollOrigin;
-    double const distance = offset.Length();
-    double const threshold = df::VisualParams::Instance().GetDragThreshold();
-    if (distance > threshold)
-      locations[0] = m_scrollOrigin + offset * ((threshold + (distance - threshold) * g_scrollSpeed) / distance);
+    SendTouches(df::TouchEvent::TOUCH_MOVE, sent, m_fingerIds, m_fingerCount);
   }
 
-  SendTouches(type, locations, static_cast<int>(count));
-  if (type == df::TouchEvent::TOUCH_UP || type == df::TouchEvent::TOUCH_CANCEL)
-  {
-    m_pinchStartDistance = 0.0;
-    m_scrollId = -1;
-    m_touchOpen = false;
-  }
-  else
-  {
-    m_touchOpen = true;
-  }
+  m_touchOpen = m_fingerCount > 0;
+  if (!m_touchOpen)
+    m_phaseCount = 0;
   event->accept();
 }
 
-void MapView::SendTouches(df::TouchEvent::ETouchType type, m2::PointD const * locations, int count)
+void MapView::StartTouchPhase(m2::PointD const * real, m2::PointD const * sent)
+{
+  m_phaseCount = m_fingerCount;
+  for (int i = 0; i < m_fingerCount; ++i)
+  {
+    m_phaseIds[i] = m_fingerIds[i];
+    m_phaseReal[i] = real[i];
+    m_phaseSent[i] = sent[i];
+  }
+}
+
+m2::PointD MapView::LastSent(int id, m2::PointD const & otherwise) const
+{
+  for (int i = 0; i < m_lastCount; ++i)
+    if (m_lastIds[i] == id)
+      return m_lastLocations[i];
+  return otherwise;
+}
+
+void MapView::SendTouches(df::TouchEvent::ETouchType type, m2::PointD const * locations, int const * ids, int count)
 {
   df::TouchEvent touchEvent;
   touchEvent.SetTouchType(type);
   for (int i = 0; i < count; ++i)
   {
     df::Touch touch;
-    touch.m_id = i;
+    touch.m_id = ids[i];
     touch.m_location = locations[i];
     if (i == 0)
       touchEvent.SetFirstTouch(touch);
     else
       touchEvent.SetSecondTouch(touch);
     m_lastLocations[i] = locations[i];
+    m_lastIds[i] = ids[i];
   }
   m_lastCount = count;
   if (g_touchDebug)
-    qInfo("  drape %s %d: (%.0f,%.0f) (%.0f,%.0f)", TouchTypeName(type), count, locations[0].x, locations[0].y,
-          count > 1 ? locations[1].x : 0.0, count > 1 ? locations[1].y : 0.0);
+    qInfo("  drape %s %d: %d(%.0f,%.0f) %d(%.0f,%.0f)", TouchTypeName(type), count, ids[0], locations[0].x,
+          locations[0].y, count > 1 ? ids[1] : -1, count > 1 ? locations[1].x : 0.0, count > 1 ? locations[1].y : 0.0);
   MapEngine::Instance().GetFramework().TouchEvent(touchEvent);
 }
 
 void MapView::touchUngrabEvent()
 {
-  m_pinchStartDistance = 0.0;
-  m_scrollId = -1;
   // Qt also calls this after every normal release. Drape only needs a cancel when a touch sequence was
   // cut off, and it must carry the touches: an empty cancel wipes drape's touches and a pending tap never fires.
-  if (!m_touchOpen || m_lastCount == 0 || !active())
-  {
-    m_touchOpen = false;
-    return;
-  }
+  bool const open = m_touchOpen && m_lastCount > 0 && active();
   m_touchOpen = false;
-  SendTouches(df::TouchEvent::TOUCH_CANCEL, m_lastLocations, m_lastCount);
+  m_fingerCount = 0;
+  m_phaseCount = 0;
+  if (open)
+  {
+    int ids[2] = {m_lastIds[0], m_lastIds[1]};
+    m2::PointD locations[2] = {m_lastLocations[0], m_lastLocations[1]};
+    SendTouches(df::TouchEvent::TOUCH_CANCEL, locations, ids, m_lastCount);
+  }
 }
 
 void MapView::SendMouse(QMouseEvent * event, int type)
