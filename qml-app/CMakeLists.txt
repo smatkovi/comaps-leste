@@ -122,4 +122,8 @@ endif()
 
 install(TARGETS ${PROJECT_NAME} RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 install(FILES ${OMIM_ROOT}/share/applications/comaps.desktop DESTINATION ${CMAKE_INSTALL_DATADIR}/applications)
+if (qt6maemo_FOUND)
+  # Hildon's app menu lists the entries below applications/hildon
+  install(FILES ${OMIM_ROOT}/share/applications/comaps.desktop DESTINATION ${CMAKE_INSTALL_DATADIR}/applications/hildon)
+endif()
 install(FILES ${OMIM_ROOT}/qt/res/logo.png DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/512x512/apps RENAME comaps.png)

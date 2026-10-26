@@ -1,3 +1,15 @@
+comaps (2026.10.01+pro1x1) daedalus; urgency=medium
+
+  * Positions from gpsd where it runs, geoclue2 otherwise (the F(x)tec Pro1X
+    feeds its modem's GNSS to gpsd).
+  * Two-finger gestures follow the fingers by id: pinch zoom on X11, where a
+    second finger arrives first in Qt's list of points.
+  * Builds on daedalus (Qt 6.4, boost 1.81) as well; depends on Leste's Qt6
+    platform and style plugins, which the Hildon session loads; the menu entry
+    is also below applications/hildon.
+
+ -- Sebastian Matkovich <sebastian.matkovich@gmail.com>  Mon, 26 Oct 2026 17:09:48 +0100
+
 comaps (2026.10.01) unstable; urgency=medium
 
   * Initial Debian package: Qt Quick interface, position from geoclue via Qt

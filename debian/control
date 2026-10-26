@@ -23,7 +23,8 @@ Build-Depends: debhelper (>= 10),
     zlib1g-dev,
     libutfcpp-dev,
     libglm-dev,
-    libboost1.88-dev
+    libboost1.88-dev | libboost1.81-dev,
+    qt6-maemo
 Homepage: https://codeberg.org/comaps/comaps
 
 Package: comaps
@@ -36,9 +37,12 @@ Depends: ${shlibs:Depends}, ${misc:Depends},
     qml6-module-qtquick-templates,
     qml6-module-qtquick-window,
     libqt6positioning6-plugins,
-    fonts-material-design-icons-iconfont
-Recommends: geoclue-2.0
+    fonts-material-design-icons-iconfont,
+    libqt6-qpa-maemo,
+    libqt6-style-maemo
+Recommends: gpsd | geoclue-2.0
 Description: Offline maps with routing and search
  CoMaps with a Qt Quick interface: offline OpenStreetMap maps, search,
- routing and turn-by-turn navigation. The position comes from geoclue
- through Qt Positioning.
+ routing and turn-by-turn navigation. The position comes from gpsd where
+ it runs (phones that feed their GNSS to it), from geoclue otherwise.
+ In the Hildon session of Maemo Leste with stacked windows and the app menu.
