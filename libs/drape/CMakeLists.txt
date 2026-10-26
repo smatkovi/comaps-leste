@@ -178,7 +178,19 @@ omim_add_library(${PROJECT_NAME} ${SRC})
 
 
 # drape renders with OpenGL ES 3; its entry points come from libGLESv2, not desktop libGL.
-find_package(OpenGL REQUIRED COMPONENTS GLES3)
+if (CMAKE_VERSION VERSION_LESS 3.27)
+  # FindOpenGL knows GLES3 only since CMake 3.27 (Debian 12 has 3.25): the same target by hand.
+  find_path(OPENGL_GLES3_INCLUDE_DIR GLES3/gl3.h REQUIRED)
+  find_library(OPENGL_gles3_LIBRARY NAMES GLESv3 GLESv2 REQUIRED)
+  if (NOT TARGET OpenGL::GLES3)
+    add_library(OpenGL::GLES3 UNKNOWN IMPORTED)
+    set_target_properties(OpenGL::GLES3 PROPERTIES
+      IMPORTED_LOCATION "${OPENGL_gles3_LIBRARY}"
+      INTERFACE_INCLUDE_DIRECTORIES "${OPENGL_GLES3_INCLUDE_DIR}")
+  endif()
+else()
+  find_package(OpenGL REQUIRED COMPONENTS GLES3)
+endif()
 
 if (VULKAN)
   target_link_libraries(${PROJECT_NAME} PUBLIC vulkan_wrapper)

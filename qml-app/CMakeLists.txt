@@ -4,7 +4,11 @@ find_package(Qt6 REQUIRED COMPONENTS Qml Quick QuickControls2 QuickWidgets Widge
 # Maemo widgets (value buttons with pickers in the settings); without them the settings use combo boxes.
 find_package(qt6maemo QUIET)
 
-qt_policy(SET QTP0001 NEW)
+# The module below /qt/qml in the resources (RESOURCE_PREFIX below): Qt 6.5's default, which Qt 6.4
+# (Debian 12) has neither as default nor as policy.
+if (COMMAND qt_policy)
+  qt_policy(SET QTP0001 NEW)
+endif()
 
 set(SRC
   bridge/bookmark_model.cpp
@@ -74,6 +78,7 @@ set_target_properties(${PROJECT_NAME} PROPERTIES AUTOMOC ON)
 qt_add_qml_module(${PROJECT_NAME}
   URI Maps
   VERSION 1.0
+  RESOURCE_PREFIX /qt/qml
   OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/qml/Maps
   QML_FILES ${QML_FILES}
 )

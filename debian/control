@@ -24,7 +24,8 @@ Build-Depends: debhelper (>= 10),
     libutfcpp-dev,
     libglm-dev,
     libboost1.88-dev | libboost1.81-dev,
-    qt6-maemo
+    qt6-maemo,
+    libqt6-style-maemo
 Homepage: https://codeberg.org/comaps/comaps
 
 Package: comaps
