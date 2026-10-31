@@ -1,3 +1,11 @@
+comaps (2026.10.01+pro1x2) daedalus; urgency=medium
+
+  * No dependency on qml6-module-qtquick-effects: no QML file imports
+    QtQuick.Effects, and Leste daedalus (Qt 6.4) has no such package, so
+    1+pro1x1 could not be installed there.
+
+ -- Sebastian Matkovich <sebastian.matkovich@gmail.com>  Sat, 31 Oct 2026 23:45:00 +0100
+
 comaps (2026.10.01+pro1x1) daedalus; urgency=medium
 
   * Positions from gpsd where it runs, geoclue2 otherwise (the F(x)tec Pro1X
