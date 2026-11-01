@@ -1,6 +1,7 @@
 pragma Singleton
 
 import QtQuick
+import Maps
 
 // Colours and base font sizes. Dark unless the theme setting is light, or follows the desktop's
 // colour scheme with the theme set to system.

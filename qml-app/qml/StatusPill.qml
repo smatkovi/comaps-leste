@@ -1,4 +1,5 @@
 import QtQuick
+import Maps
 
 // A short status in a pill; kind "accent" or "warn" colours its dot and border.
 Rectangle {

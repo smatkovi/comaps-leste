@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
+import Maps
 
 // A tinted note; kind is "accent", "warn" or "danger".
 Rectangle {

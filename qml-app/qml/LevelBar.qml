@@ -1,4 +1,5 @@
 import QtQuick
+import Maps
 
 // A thin progress bar for value between from and to.
 Rectangle {

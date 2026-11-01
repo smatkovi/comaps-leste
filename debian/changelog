@@ -1,3 +1,14 @@
+comaps (2026.10.01+pro1x3) daedalus; urgency=medium
+
+  * Starts on Leste daedalus (Qt 6.4): the QML files import their own module
+    Maps; Qt 6.4's implicit import of their directory brought the module's
+    QML types but not its C++ ones ("MapView is not a type").
+  * Depends on qt6-maemo (libqt6maemo.so, which shlibs did not find) and on
+    qml6-module-qtqml-workerscript (QtQuick needs it, Debian's
+    qml6-module-qtquick does not depend on it).
+
+ -- Sebastian Matkovich <sebastian.matkovich@gmail.com>  Sun, 01 Nov 2026 08:20:00 +0100
+
 comaps (2026.10.01+pro1x2) daedalus; urgency=medium
 
   * No dependency on qml6-module-qtquick-effects: no QML file imports

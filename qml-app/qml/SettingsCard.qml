@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
+import Maps
 
 // A rounded group of rows. Children are stacked in a column; rows reach the card's edges and indent
 // their content by sideInset.

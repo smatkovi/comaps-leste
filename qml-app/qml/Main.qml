@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import Maps
 
 // The content of the main window (MainWindow, a QMainWindow): the map and the pages on top of it.
 // The window menu is the native one; it calls the functions at the bottom.

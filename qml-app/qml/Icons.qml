@@ -1,6 +1,7 @@
 pragma Singleton
 
 import QtQuick
+import Maps
 
 // Icons are drawn with the Material Icons font (fonts-material-design-icons-iconfont), whose
 // ligatures turn an icon's name into its glyph.

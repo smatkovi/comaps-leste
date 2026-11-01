@@ -1,4 +1,5 @@
 import QtQuick
+import Maps
 
 // A pill-shaped button with a label and an optional icon; primary ones are filled with the accent.
 Rectangle {

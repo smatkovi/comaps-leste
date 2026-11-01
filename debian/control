@@ -36,10 +36,12 @@ Depends: ${shlibs:Depends}, ${misc:Depends},
     qml6-module-qtquick-layouts,
     qml6-module-qtquick-templates,
     qml6-module-qtquick-window,
+    qml6-module-qtqml-workerscript,
     libqt6positioning6-plugins,
     fonts-material-design-icons-iconfont,
     libqt6-qpa-maemo,
-    libqt6-style-maemo
+    libqt6-style-maemo,
+    qt6-maemo
 Recommends: gpsd | geoclue-2.0
 Description: Offline maps with routing and search
  CoMaps with a Qt Quick interface: offline OpenStreetMap maps, search,

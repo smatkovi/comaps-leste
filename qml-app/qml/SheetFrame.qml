@@ -1,4 +1,5 @@
 import QtQuick
+import Maps
 
 // A sheet that slides up from the bottom over a dimmed backdrop. Children are stacked in a column
 // bodyWidth wide; tapping the backdrop closes it.

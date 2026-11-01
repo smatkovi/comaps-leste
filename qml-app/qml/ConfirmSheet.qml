@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
+import Maps
 
 // Asks to confirm an action. extraContent goes between the message and the buttons.
 SheetFrame {

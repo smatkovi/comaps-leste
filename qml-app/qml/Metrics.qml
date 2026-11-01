@@ -1,6 +1,7 @@
 pragma Singleton
 
 import QtQuick
+import Maps
 
 QtObject {
     readonly property real scale: Style.scaleFactor

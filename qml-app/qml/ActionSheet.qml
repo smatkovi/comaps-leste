@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
+import Maps
 
 // A list of options ({index, label, glyph, destructive, enabled, checked}) to pick one from.
 SheetFrame {

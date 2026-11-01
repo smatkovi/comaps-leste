@@ -1,4 +1,5 @@
 import QtQuick
+import Maps
 
 Text {
     color: Style.textDim

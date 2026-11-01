@@ -53,7 +53,9 @@ MainWindow::MainWindow(Settings & settings, MapController & mapController, QWidg
       LOG(LWARNING, ("QML:", warning.toString().toStdString()));
   });
   // The Maps QML module is in the resources under /qt/qml/Maps (QQuickWidget::loadFromModule needs Qt 6.9);
-  // Qt 6.5 imports from there by itself, Qt 6.4 needs the path.
+  // Qt 6.5 imports from there by itself, Qt 6.4 needs the path. The QML files import Maps themselves: in
+  // Qt 6.4 the implicit import of their own directory brings the module's QML types, not its C++ ones
+  // (MapView and the bridge types).
   m_quick->engine()->addImportPath(QStringLiteral("qrc:/qt/qml"));
   m_quick->setSource(QUrl(QStringLiteral("qrc:/qt/qml/Maps/Main.qml")));
   for (auto const & error : m_quick->errors())

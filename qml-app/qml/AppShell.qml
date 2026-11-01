@@ -2,6 +2,7 @@ pragma Singleton
 
 import QtQuick
 import QtQuick.Controls
+import Maps
 
 QtObject {
     id: shell

@@ -1,4 +1,5 @@
 import QtQuick
+import Maps
 
 // A segmented control: one of options ({key, label, glyph}) is current.
 Rectangle {

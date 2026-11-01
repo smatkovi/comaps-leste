@@ -1,4 +1,5 @@
 import QtQuick
+import Maps
 
 // A rounded search field. edited is emitted for every change of the text, accepted on Enter.
 Rectangle {

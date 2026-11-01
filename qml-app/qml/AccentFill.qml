@@ -1,4 +1,5 @@
 import QtQuick
+import Maps
 
 // A surface filled with the accent colour, slightly graded from top to bottom.
 Rectangle {

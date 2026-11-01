@@ -1,4 +1,5 @@
 import QtQuick
+import Maps
 
 Item {
     id: root

@@ -1,4 +1,5 @@
 import QtQuick
+import Maps
 
 // An icon button: filled with baseColor while lit, a plain bordered surface otherwise.
 Item {

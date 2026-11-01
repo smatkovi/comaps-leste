@@ -1,4 +1,5 @@
 import QtQuick
+import Maps
 
 MapButton {
     readonly property int mode: MapController.myPositionMode
